@@ -38,5 +38,9 @@
     "tests/integration/testfrm",
     "tests/integration/tests",
     "tests/unit/env",
-  ]
+  ],
+  "files.associations": {
+    "*.h": "c",
+    "*.c": "c",
+  }
 }

@@ -244,15 +244,6 @@ int16_t COEmcyCnt(CO_EMCY *emcy);
 */
 void COEmcyReset(CO_EMCY *emcy, uint8_t silent);
 
-/*! \brief RESET EMCY HISTORY
-*
-*    This function clears the EMCY history in the object dictionary.
-*
-* \param emcy
-*    pointer to the EMCY object
-*/
-void COEmcyHistReset(struct CO_EMCY_T *emcy);
-
 #ifdef __cplusplus               /* for compatibility with C++ environments  */
 }
 #endif

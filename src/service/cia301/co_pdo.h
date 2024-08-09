@@ -51,6 +51,14 @@ extern "C" {
 #define CO_RPDO_FLG__E      0x01                    /*!< enabled RPDO        */
 #define CO_RPDO_FLG_S_      0x02                    /*!< synchronized RPDO   */
 
+#define CO_RPDO_MAP_DUMMY_I8    0x00020008      /* RPDO Map Dummy INTEGER8   */
+#define CO_RPDO_MAP_DUMMY_I16   0x00030010      /* RPDO Map Dummy INTEGER16  */
+#define CO_RPDO_MAP_DUMMY_I24   0x00100018      /* RPDO Map Dummy INTEGER24  */
+#define CO_RPDO_MAP_DUMMY_I32   0x00040020      /* RPDO Map Dummy INTEGER32  */
+#define CO_RPDO_MAP_DUMMY_U8    0x00050008      /* RPDO Map Dummy UNSIGNED8  */
+#define CO_RPDO_MAP_DUMMY_U16   0x00060010      /* RPDO Map Dummy UNSIGNED16 */
+#define CO_RPDO_MAP_DUMMY_U24   0x00160018      /* RPDO Map Dummy UNSIGNED24 */
+#define CO_RPDO_MAP_DUMMY_U32   0x00070020      /* RPDO Map Dummy UNSIGNED32 */
 
 /*! \brief RPDO COB-ID parameter
 *
@@ -195,6 +203,7 @@ typedef struct CO_TPDO_T {
     uint32_t          Inhibit;     /*!< inhibit time in timer ticks          */
     uint8_t           Flags;       /*!< info flags                           */
     uint8_t           ObjNum;      /*!< Number of linked objects             */
+    int16_t           NumTransl;   /*!< TPDO number translated to            */
 
 } CO_TPDO;
 
@@ -210,6 +219,7 @@ typedef struct CO_RPDO_T {
     uint8_t           Size[8];     /*!< size of mapped object value in bytes */
     uint8_t           ObjNum;      /*!< Number of linked objects             */
     uint8_t           Flag;        /*!< Flags attributed of PDO              */
+    int16_t           NumTransl;   /*!< RPDO number translated to            */
 
 } CO_RPDO;
 
@@ -243,6 +253,38 @@ void COTPdoTrigObj(CO_TPDO *tpdo, struct CO_OBJ_T *obj);
 *    Number of TPDO (0..511)
 */
 void COTPdoTrigPdo(CO_TPDO *tpdo, uint16_t num);
+
+/*! \brief TPDO TRANSLATE TPDO-NUM
+*
+*    This function allows the application to translate a TPDO number to a
+*    different given TPDO number.
+*
+* \param tpdo
+*    Pointer to start of TPDO array
+*
+* \param num
+*    Number of TPDO (0..511)
+*
+* \param num_translate
+*    Number of TPDO to translate into (0..511)
+*/
+void COTPdoTranslatePdo(CO_TPDO *pdo, uint16_t num, uint16_t num_translate);
+
+/*! \brief RPDO TRANSLATE RPDO-NUM
+*
+*    This function allows the application to translate a RPDO number to a
+*    different given RPDO number.
+*
+* \param tpdo
+*    Pointer to start of RPDO array
+*
+* \param num
+*    Number of RPDO (0..511)
+*
+* \param num_translate
+*    Number of RPDO to translate into (0..511)
+*/
+void CORPdoTranslatePdo(CO_RPDO *pdo, uint16_t num, uint16_t num_translate);
 
 /******************************************************************************
 * PRIVATE FUNCTIONS
@@ -538,6 +580,16 @@ extern void COPdoTransmit(CO_IF_FRM *frm);
 * \retval   >0    CAN message frame is consumed
 */
 extern int16_t COPdoReceive(CO_IF_FRM *frm);
+
+/*! \brief  RPDO UPDATE
+*
+*    This function is called just after the RPDO is written to the object
+*    dictionary.
+*
+* \param pdo
+*    Pointer to received RPDO
+*/
+extern void COPdoUpdate(CO_RPDO *pdo);
 
 /*! \brief  PDO WRITE DATA CALLBACK
 *

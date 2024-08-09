@@ -45,17 +45,26 @@ The source code is compliant to the C99 standard and you must cross-compile the 
 
 - Baudrate configuration
 - NodeId configuration
+- Fastscan slave service
 
 *Note: the term 'unlimited' means, that the implementation introduces no additional limit. There are technical limits, described in the specification (for example: up to 511 possible TPDOs)*
 
 ## Usage
 
-With version 4.4, the CANopen Stack project introduces an ecosystem that tries to support you in your project management. This support uses multiple repositories for essential aspects of an embedded software project setup:
+With version 4.4, the CANopen Stack project introduces an ecosystem which supports you in managing target specific applications. This support uses multiple repositories for different aspects of the embedded software project setup:
 
 - **[cmake-scripts](https://github.com/embedded-office/cmake-scripts)** - this repository is responsible for the embedded toolchains and the component package management.
 - **[canopen-stack](https://github.com/embedded-office/canopen-stack)** - this repository represents the platform independent CANopen stack component.
-- **[canopen-stm32f7xx](https://github.com/embedded-office/canopen-stm32f7xx)** - this repository contains a complete Quickstart example setup for the device STM32F769. The adaption to other devices out of the STM32F7 series are small.
+
+### Embedded Target: STM32F7 series
+
+- **[canopen-stm32f7xx](https://github.com/embedded-office/canopen-stm32f7xx)** - this repository contains a complete Quickstart example setup for the device `STM32F769`.
 - **[STM32CubeF7](https://github.com/embedded-office/STM32CubeF7)** - this fork of the ST Microelectronics HAL package is integrated into the CMake build system and packaged with minimal required source files to get the ST HAL/LL drivers working (No middleware and documentation).
+
+### Embedded Target: STM32F4 series
+
+- **[canopen-stm32f4xx](https://github.com/embedded-office/canopen-stm32f4xx)** - this repository contains a complete Quickstart example setup for the device `STM32F446`.
+- **[STM32CubeF4](https://github.com/embedded-office/STM32CubeF4)** - this fork of the ST Microelectronics HAL package is integrated into the CMake build system and packaged with minimal required source files to get the ST HAL/LL drivers working (No middleware and documentation).
 
 ## Add Component in CMake (recommended)
 
@@ -105,10 +114,22 @@ Download and install these free tools for your system:
 - Install the build tools [Cmake](https://cmake.org/)
 - Install the build system [Ninja](https://ninja-build.org/)
 - Install the static checker [cppcheck](http://cppcheck.net/)
+
+#### Linux and Mac
+
 - Install the compiler [LLVM](https://clang.llvm.org/)
 
-*Note: on my Windows machine, I use the [Visual Studio 2019 Build Tools](https://visualstudio.microsoft.com/de/downloads) which inlcudes the LLVM compiler and the required Windows SDK libraries.*
+#### Windows
 
+- Install the [Build Tools for Visual Studio 2019](https://my.visualstudio.com/Downloads?q=Build%20Tools%20for%20Visual%20Studio%202019) with the folowing components selected:
+
+  - MSVC v142 - VS 2019 C++
+
+  - Windows 10 SDK
+
+  - C++-CLang-Tools for Windows
+
+  *Note: Add the clang.exe binary path to the path environment variable so cmake can find it (On my machine: `%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\VC\Tools\Llvm\bin`)*
 
 ## Run the Test Applications
 

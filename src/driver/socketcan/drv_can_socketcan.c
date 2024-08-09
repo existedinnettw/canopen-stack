@@ -51,12 +51,12 @@
  * PRIVATE FUNCTIONS
  ******************************************************************************/
 
-static void DrvCanInit(CO_IF_CAN_DRV *super);
-static void DrvCanEnable(CO_IF_CAN_DRV *super, uint32_t baudrate);
-static int16_t DrvCanSend(CO_IF_CAN_DRV *super, CO_IF_FRM *frm);
-static int16_t DrvCanRead(CO_IF_CAN_DRV *super, CO_IF_FRM *frm);
-static void DrvCanReset(CO_IF_CAN_DRV *super);
-static void DrvCanClose(CO_IF_CAN_DRV *super);
+static void DrvCanInit(const CO_IF_CAN_DRV *super);
+static void DrvCanEnable(const CO_IF_CAN_DRV *super, uint32_t baudrate);
+static int16_t DrvCanSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm);
+static int16_t DrvCanRead(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm);
+static void DrvCanReset(const CO_IF_CAN_DRV *super);
+static void DrvCanClose(const CO_IF_CAN_DRV *super);
 
 /******************************************************************************
  * PUBLIC VARIABLE
@@ -65,7 +65,7 @@ static void DrvCanClose(CO_IF_CAN_DRV *super);
 /******************************************************************************
  * PUBLIC FUNCTIONS
  ******************************************************************************/
-void COLnxSktCanInit(CO_LNX_SKTCAN *self, char *if_name)
+void COLnxSktCanInit(CO_LNX_SKTCAN *self, const char *if_name)
 {
     self->super.Init = DrvCanInit;
     self->super.Enable = DrvCanEnable;
@@ -81,7 +81,7 @@ void COLnxSktCanInit(CO_LNX_SKTCAN *self, char *if_name)
  * PRIVATE FUNCTIONS
  ******************************************************************************/
 
-static void DrvCanInit(CO_IF_CAN_DRV *super)
+static void DrvCanInit(const CO_IF_CAN_DRV *super)
 {
     printf("%s\n", __func__);
 
@@ -123,7 +123,7 @@ static void DrvCanInit(CO_IF_CAN_DRV *super)
     printf("CAN socket initialization success\n");
 }
 
-static void DrvCanEnable(CO_IF_CAN_DRV *super, uint32_t baudrate)
+static void DrvCanEnable(const CO_IF_CAN_DRV *super, uint32_t baudrate)
 {
     printf("%s\n", __func__);
 
@@ -135,7 +135,7 @@ static void DrvCanEnable(CO_IF_CAN_DRV *super, uint32_t baudrate)
     */
 }
 
-static int16_t DrvCanSend(CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
+static int16_t DrvCanSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
 {
     struct can_frame frame = {0};
     frame.can_id = frm->Identifier;
@@ -154,12 +154,12 @@ static int16_t DrvCanSend(CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
     return sizeof(CO_IF_FRM);
 }
 
-static int16_t DrvCanRead(CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
+static int16_t DrvCanRead(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
 {
     struct can_frame frame = {0};
     CO_LNX_SKTCAN *self = container_of(super, CO_LNX_SKTCAN, super);
 
-    auto bytesReceived = read(self->CanSocket, &frame, sizeof(frame));
+    ssize_t bytesReceived = read(self->CanSocket, &frame, sizeof(frame));
     if (bytesReceived <= 0)
     {
         // std::cout << "DrvCanRead failed" << std::endl;
@@ -174,7 +174,7 @@ static int16_t DrvCanRead(CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
     return sizeof(CO_IF_FRM);
 }
 
-static void DrvCanReset(CO_IF_CAN_DRV *super)
+static void DrvCanReset(const CO_IF_CAN_DRV *super)
 {
     printf("%s\n", __func__);
 
@@ -184,7 +184,7 @@ static void DrvCanReset(CO_IF_CAN_DRV *super)
     DrvCanInit(super);
 }
 
-static void DrvCanClose(CO_IF_CAN_DRV *super)
+static void DrvCanClose(const CO_IF_CAN_DRV *super)
 {
     printf("%s\n", __func__);
 

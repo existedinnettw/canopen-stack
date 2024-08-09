@@ -57,7 +57,7 @@ extern "C"
     /**
      * ctor of CO_LNX_SKTCAN
      */
-    void COLnxSktCanInit(CO_LNX_SKTCAN *self, char *if_name);
+    void COLnxSktCanInit(CO_LNX_SKTCAN *self, const char *if_name);
 
 #ifdef __cplusplus /* for compatibility with C++ environments  */
 }

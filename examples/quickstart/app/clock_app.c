@@ -21,6 +21,8 @@
 /* get external node specification */
 #include "clock_spec.h"
 
+#include "drv_can_socketcan.h"
+
 /******************************************************************************
 * PRIVATE VARIABLES
 ******************************************************************************/
@@ -97,6 +99,10 @@ int main(void)
     /* Initialize the CANopen stack. Stop execution if an
      * error is detected.
      */
+    CO_LNX_SKTCAN Linux_Socketcan_CanDriver;
+    COLnxSktCanInit(&Linux_Socketcan_CanDriver, "can0");
+    AppSpec.Drv->Can = &Linux_Socketcan_CanDriver.super;
+
     CONodeInit(&Clk, &AppSpec);
     if (CONodeGetErr(&Clk) != CO_ERR_NONE) {
         while(1);

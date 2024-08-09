@@ -26,7 +26,7 @@ enable_testing()
 # project wide setup
 #
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-set(CMAKE_C_STANDARD 99)
+# set(CMAKE_C_STANDARD 99) #I need offset_of
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 

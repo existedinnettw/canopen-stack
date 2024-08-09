@@ -31,6 +31,7 @@ target_include_directories(canopen-stack
     object/cia301
     service/cia301
     service/cia305
+    driver/socketcan
 )
 
 #---
@@ -53,6 +54,8 @@ target_sources(canopen-stack
     hal/co_if_can.c
     hal/co_if_nvm.c
     hal/co_if_timer.c
+    # driver
+    driver/socketcan/drv_can_socketcan.c
 
     # object type functions
     # - basic types

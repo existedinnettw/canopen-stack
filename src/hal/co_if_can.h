@@ -188,21 +188,24 @@ typedef struct CO_IF_FRM_T {         /*!< Type, which represents a CAN frame */
     uint8_t   DLC;                   /*!< CAN message data length code (DLC) */
 } CO_IF_FRM;
 
-typedef void    (*CO_IF_CAN_INIT_FUNC  )(void);
-typedef void    (*CO_IF_CAN_ENABLE_FUNC)(uint32_t);
-typedef int16_t (*CO_IF_CAN_READ_FUNC  )(CO_IF_FRM *);
-typedef int16_t (*CO_IF_CAN_SEND_FUNC  )(CO_IF_FRM *);
-typedef void    (*CO_IF_CAN_RESET_FUNC )(void);
-typedef void    (*CO_IF_CAN_CLOSE_FUNC )(void);
-
+/**
+ * @interface
+ */
 typedef struct CO_IF_CAN_DRV_T {
-    CO_IF_CAN_INIT_FUNC   Init;
-    CO_IF_CAN_ENABLE_FUNC Enable;
-    CO_IF_CAN_READ_FUNC   Read;
-    CO_IF_CAN_SEND_FUNC   Send;
-    CO_IF_CAN_RESET_FUNC  Reset;
-    CO_IF_CAN_CLOSE_FUNC  Close;
+    void    (*Init  )(const struct CO_IF_CAN_DRV_T*); //CO_IF_CAN_INIT_FUNC
+    void    (*Enable)(const struct CO_IF_CAN_DRV_T*, uint32_t); //CO_IF_CAN_ENABLE_FUNC
+    int16_t (*Read  )(const struct CO_IF_CAN_DRV_T*, CO_IF_FRM *); //CO_IF_CAN_READ_FUNC
+    int16_t (*Send  )(const struct CO_IF_CAN_DRV_T*, CO_IF_FRM *); //CO_IF_CAN_SEND_FUNC
+    void    (*Reset )(const struct CO_IF_CAN_DRV_T*); //CO_IF_CAN_RESET_FUNC
+    void    (*Close )(const struct CO_IF_CAN_DRV_T*); //CO_IF_CAN_CLOSE_FUNC
 } CO_IF_CAN_DRV;
+
+typedef void    (*CO_IF_CAN_INIT_FUNC  )(const CO_IF_CAN_DRV*);
+typedef void    (*CO_IF_CAN_ENABLE_FUNC)(const CO_IF_CAN_DRV*, uint32_t);
+typedef int16_t (*CO_IF_CAN_READ_FUNC  )(const CO_IF_CAN_DRV*, CO_IF_FRM *);
+typedef int16_t (*CO_IF_CAN_SEND_FUNC  )(const CO_IF_CAN_DRV*, CO_IF_FRM *);
+typedef void    (*CO_IF_CAN_RESET_FUNC )(const CO_IF_CAN_DRV*);
+typedef void    (*CO_IF_CAN_CLOSE_FUNC )(const CO_IF_CAN_DRV*);
 
 /******************************************************************************
 * PUBLIC FUNCTIONS

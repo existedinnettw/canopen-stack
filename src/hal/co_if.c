@@ -39,5 +39,5 @@ void COIfInit(CO_IF *cif, struct CO_NODE_T *node, uint32_t freq)
     /* initialize hardware via drivers */
     nvm->Init();
     timer->Init(freq);
-    can->Init();
+    can->Init(can);
 }

@@ -60,19 +60,19 @@ const CO_IF_CAN_DRV DummyCanDriver = {
 * PRIVATE FUNCTIONS
 ******************************************************************************/
 
-static void DrvCanInit(void)
+static void DrvCanInit(const CO_IF_CAN_DRV*)
 {
     /* TODO: initialize the CAN controller (don't enable communication) */
 }
 
-static void DrvCanEnable(uint32_t baudrate)
+static void DrvCanEnable(const CO_IF_CAN_DRV*, uint32_t baudrate)
 {
     (void)baudrate;
 
     /* TODO: set the given baudrate to the CAN controller */
 }
 
-static int16_t DrvCanSend(CO_IF_FRM *frm)
+static int16_t DrvCanSend(const CO_IF_CAN_DRV*, CO_IF_FRM *frm)
 {
     (void)frm;
 
@@ -80,7 +80,7 @@ static int16_t DrvCanSend(CO_IF_FRM *frm)
     return (0u);
 }
 
-static int16_t DrvCanRead (CO_IF_FRM *frm)
+static int16_t DrvCanRead (const CO_IF_CAN_DRV*, CO_IF_FRM *frm)
 {
     (void)frm;
 
@@ -88,12 +88,12 @@ static int16_t DrvCanRead (CO_IF_FRM *frm)
     return (0u);
 }
 
-static void DrvCanReset(void)
+static void DrvCanReset(const CO_IF_CAN_DRV*)
 {
     /* TODO: reset CAN controller while keeping baudrate */
 }
 
-static void DrvCanClose(void)
+static void DrvCanClose(const CO_IF_CAN_DRV*)
 {
     /* TODO: remove CAN controller from CAN network */
 }

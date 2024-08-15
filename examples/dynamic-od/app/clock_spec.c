@@ -20,6 +20,7 @@
 
 #include "clock_spec.h"
                                               /* select application drivers: */
+#include "drv_can_socketcan.h"
 #include "drv_can_sim.h"                      /* CAN driver                  */
 #include "drv_timer_swcycle.h"                /* Timer driver                */
 #include "drv_nvm_sim.h"                      /* NVM driver                  */
@@ -88,8 +89,9 @@ static uint8_t SdoSrvMem[CO_SSDO_N * CO_SDO_BUF_BYTE];
  * we select the driver templates. You may fill them with
  * your specific hardware functionality.
  */
+CO_LNX_SKTCAN Linux_Socketcan_CanDriver;
 static struct CO_IF_DRV_T AppDriver = {
-    &SimCanDriver,
+    &Linux_Socketcan_CanDriver.super,
     &SwCycleTimerDriver,
     &SimNvmDriver
 };
@@ -199,6 +201,8 @@ void ClkStartNode(CO_NODE *node)
 
     /* Setup the object dictionary during runtime */
     ODCreateDict(&DynDict);
+
+    COLnxSktCanInit(&Linux_Socketcan_CanDriver, "can0");
 
     /* Create a node with generated object dictionary */
     CONodeInit(node, &AppSpec);

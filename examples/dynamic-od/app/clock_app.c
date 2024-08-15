@@ -21,12 +21,23 @@
 /* get external node specification */
 #include "clock_spec.h"
 
+#include "drv_can_socketcan.h"
+
+#include <time.h>      //posix
+#include <signal.h>    //posix
+#include <threads.h>   //C11
+#include <stdatomic.h> //C11
+
+#include <stdio.h>
+#include <stdlib.h>
+
 /******************************************************************************
 * PRIVATE VARIABLES
 ******************************************************************************/
 
 /* Allocate a global CANopen node object */
 static CO_NODE Clk;
+static volatile sig_atomic_t keep_running = 1;
 
 /******************************************************************************
 * PRIVATE FUNCTIONS
@@ -80,6 +91,58 @@ static void AppClock(void *p_arg)
         COObjWrValue(od_min, node, (void *)&minute, sizeof(minute));
         COObjWrValue(od_sec, node, (void *)&second, sizeof(second));
     }
+    printf("app clock called\n");
+}
+
+static void sig_handler(int _)
+{
+    (void)_;
+    keep_running = 0;
+}
+
+struct timespec
+timespec_add(struct timespec time1, struct timespec time2)
+{
+  struct timespec result;
+  const uint32_t NSEC_PER_SEC = 1e9;
+  if ((time1.tv_nsec + time2.tv_nsec) >= NSEC_PER_SEC) {
+    result.tv_sec = time1.tv_sec + time2.tv_sec + 1;
+    result.tv_nsec = time1.tv_nsec + time2.tv_nsec - NSEC_PER_SEC;
+  } else {
+    result.tv_sec = time1.tv_sec + time2.tv_sec;
+    result.tv_nsec = time1.tv_nsec + time2.tv_nsec;
+  }
+  return result;
+}
+
+/**
+ * @brief
+ * simulation of realtime callback.
+ */
+int rt_cb(void *args)
+{
+    CO_NODE *Node = (CO_NODE *)args;
+    struct timespec wakeup_time;
+    struct timespec rem = {0};
+
+    // APP_TICKS_PER_SEC should match following period config.
+    __syscall_slong_t tv_nsec=1e6; // 1 ms
+    clock_gettime(CLOCK_MONOTONIC, &wakeup_time);
+    wakeup_time = timespec_add(wakeup_time, (struct timespec){ .tv_sec=0, .tv_nsec=tv_nsec });
+
+    while (keep_running)
+    {
+        if (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &wakeup_time, NULL))
+        {
+            printf("rt thread exit\n");
+            return EXIT_FAILURE;
+        }
+        COTmrService(&Node->Tmr);
+        COTmrProcess(&Clk.Tmr);
+        wakeup_time = timespec_add(wakeup_time, (struct timespec){ .tv_sec=0, .tv_nsec=tv_nsec });
+    }
+    printf("rt thread exit success\n");
+    return EXIT_SUCCESS;
 }
 
 /******************************************************************************
@@ -115,11 +178,27 @@ int main(void)
     CONodeStart(&Clk);
     CONmtSetMode(&Clk.Nmt, CO_OPERATIONAL);
 
+    thrd_t thread;
+    if (thrd_create(&thread, rt_cb, &Clk) != thrd_success)
+    {
+        printf("Failed to create thread\n");
+        return EXIT_FAILURE;
+    }
+
     /* In the background loop we process received CAN frames
      * and executes elapsed action callback functions.
      */
-    while (1) {
+    while (keep_running)
+    {
+        // rx process need to put in super loop
         CONodeProcess(&Clk);
-        COTmrProcess(&Clk.Tmr);
+        // COTmrProcess(&Clk.Tmr);
     }
+    // Wait for the thread to finish
+    if (thrd_join(thread, NULL) != thrd_success)
+    {
+        printf("Failed to join thread\n");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

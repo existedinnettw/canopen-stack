@@ -32,6 +32,7 @@ target_include_directories(canopen-stack
     service/cia301
     service/cia305
     driver/socketcan
+    driver/swcycle
 )
 
 #---
@@ -56,6 +57,7 @@ target_sources(canopen-stack
     hal/co_if_timer.c
     # driver
     driver/socketcan/drv_can_socketcan.c
+    driver/swcycle/drv_timer_swcycle.c
 
     # object type functions
     # - basic types

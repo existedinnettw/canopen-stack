@@ -31,7 +31,6 @@ target_sources(demo-dynamic-od
     # driver
     driver/drv_can_sim.c
     driver/drv_nvm_sim.c
-    driver/drv_timer_swcycle.c
   )
 target_include_directories(demo-dynamic-od
   PRIVATE

@@ -30,7 +30,6 @@ target_sources(demo-quickstart
     # driver
     driver/drv_can_sim.c
     driver/drv_nvm_sim.c
-    driver/drv_timer_swcycle.c
   )
 target_include_directories(demo-quickstart
   PRIVATE

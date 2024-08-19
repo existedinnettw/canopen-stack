@@ -23,10 +23,12 @@
 
 #include "drv_can_socketcan.h"
 
+#define _OPEN_THREADS
+#include <pthread.h>   //posix
 #include <time.h>      //posix
 #include <signal.h>    //posix
-#include <threads.h>   //C11
 #include <stdatomic.h> //C11
+#include <errno.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -119,7 +121,7 @@ timespec_add(struct timespec time1, struct timespec time2)
  * @brief
  * simulation of realtime callback.
  */
-int rt_cb(void *args)
+void* rt_cb(void *args)
 {
     CO_NODE *Node = (CO_NODE *)args;
     struct timespec wakeup_time;
@@ -135,14 +137,21 @@ int rt_cb(void *args)
         if (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &wakeup_time, NULL))
         {
             printf("rt thread exit\n");
-            return EXIT_FAILURE;
+            pthread_exit((void *)EXIT_FAILURE);
         }
         COTmrService(&Node->Tmr);
         COTmrProcess(&Clk.Tmr);
+        CONodeProcess(&Clk);
         wakeup_time = timespec_add(wakeup_time, (struct timespec){ .tv_sec=0, .tv_nsec=tv_nsec });
     }
     printf("rt thread exit success\n");
-    return EXIT_SUCCESS;
+    pthread_exit((void *)EXIT_SUCCESS);
+}
+
+void handle_error_en(int err, const char *msg) {
+    errno = err;
+    perror(msg);
+    exit(EXIT_FAILURE);
 }
 
 /******************************************************************************
@@ -184,27 +193,20 @@ int main(void)
     CONodeStart(&Clk);
     CONmtSetMode(&Clk.Nmt, CO_OPERATIONAL);
 
-    thrd_t thread;
-    if (thrd_create(&thread, rt_cb, &Clk) != thrd_success)
-    {
-        printf("Failed to create thread\n");
-        return EXIT_FAILURE;
+    pthread_t thread;
+    pthread_attr_t attr;
+    struct sched_param sched;
+    pthread_attr_init(&attr);
+    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    pthread_attr_setschedparam(&attr, &sched);
+    int ret = pthread_create(&thread, &attr, rt_cb, (void *)&Clk);
+    if (ret != 0) {
+        handle_error_en(ret, "pthread_create");
     }
 
-    /* In the background loop we process received CAN frames
-     * and executes elapsed action callback functions.
-     */
-    while (keep_running)
-    {
-        // rx process need to put in super loop
-        CONodeProcess(&Clk);
-        // COTmrProcess(&Clk.Tmr);
-    }
-    // Wait for the thread to finish
-    if (thrd_join(thread, NULL) != thrd_success)
-    {
-        printf("Failed to join thread\n");
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
+    void *status;
+    pthread_join(thread, &status);
+    return (int)(intptr_t)status;
 }

@@ -29,18 +29,19 @@
 * PUBLIC MACROS
 ******************************************************************************/
 
-#ifndef NDEBUG
+// #ifndef NDEBUG
 /* For unit testing and debug builds, the marked implementation of functions
  * are included as weak symbol in the CANopen library. This weak symbols help
  * us to improve testability by allowing stubbing functions in the test cases
  * with stub functions of the same symbol name.
  */
-#ifndef WEAK_TEST
+// #ifndef WEAK_TEST
 #define WEAK_TEST    __attribute__((weak))
-#endif
-#else
-#define WEAK_TEST
-#endif
+// #endif
+// #else
+// #define WEAK_TEST
+// #endif
+
 #define WEAK    __attribute__((weak))
 
 #define CO_UNUSED(var)    (void)(var)

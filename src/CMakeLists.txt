@@ -47,6 +47,7 @@ target_sources(canopen-stack
     core/co_core.c
     core/co_dict.c
     core/co_nmt.c
+    core/co_nmt_master.c
     core/co_obj.c
     core/co_tmr.c
     core/co_ver.c

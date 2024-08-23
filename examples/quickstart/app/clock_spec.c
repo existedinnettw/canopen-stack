@@ -61,6 +61,10 @@ const  uint32_t Obj1018_04_20 = 0x00000000L;
 const  uint32_t Obj1200_01_20 = CO_COBID_SDO_REQUEST();
 const  uint32_t Obj1200_02_20 = CO_COBID_SDO_RESPONSE();
 
+uint8_t   serverId = 0x37;
+const  uint32_t Obj1280_01_20 = 0x600; // client -> server (tx)
+const  uint32_t Obj1280_02_20 = 0x580; //rx
+
 const  uint32_t Obj1800_01_20 = CO_COBID_TPDO_DEFAULT(0);
 
 const  uint32_t Obj1A00_01_20 = CO_LINK(0x2100, 0x01, 32);
@@ -83,6 +87,13 @@ static struct CO_OBJ_T ClockOD[APP_OBJ_N] = {
     {CO_KEY(0x1200, 0, CO_OBJ_D___R_), CO_TUNSIGNED8 , (CO_DATA)(2)             },
     {CO_KEY(0x1200, 1, CO_OBJ__N__R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1200_01_20)},
     {CO_KEY(0x1200, 2, CO_OBJ__N__R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1200_02_20)},
+
+    //add for expm, sdo
+    {CO_KEY(0x1280 + (0), 0, CO_OBJ_D___R_), CO_TUNSIGNED8 , (CO_DATA)(3)             },  // , CO_TUNSIGNED8, (CO_DATA)(val)
+    {CO_KEY(0x1280 + (0), 1, CO_OBJ_____RW), CO_TSDO_ID, (CO_DATA)(&Obj1280_01_20)},
+    {CO_KEY(0x1280 + (0), 2, CO_OBJ_____RW), CO_TSDO_ID, (CO_DATA)(&Obj1280_02_20)},
+    {CO_KEY(0x1280 + (0), 3, CO_OBJ_____RW), CO_TUNSIGNED8 , (CO_DATA)(&serverId)          },
+    //end expm
 
     {CO_KEY(0x1800, 0, CO_OBJ_D___R_), CO_TUNSIGNED8 , (CO_DATA)(2)             },
     {CO_KEY(0x1800, 1, CO_OBJ__N__R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1800_01_20)},

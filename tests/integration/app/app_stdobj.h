@@ -232,7 +232,7 @@ extern "C" {
 */
 /*---------------------------------------------------------------------------*/
 #define OBJ128X_0(cli,val)  \
-    CO_KEY(0x1200 + (cli), 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(val)
+    CO_KEY(0x1280 + (cli), 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(val)
 
 /*---------------------------------------------------------------------------*/
 /*! \brief OBJECT 1280h:1 - SDO CLIENT PARAMETER COB-ID CLIENT TO SERVER (TX)

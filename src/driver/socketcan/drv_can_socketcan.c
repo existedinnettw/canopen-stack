@@ -17,7 +17,7 @@
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
-
+#define _DEFAULT_SOURCE
 #include "drv_can_socketcan.h"
 
 #include <stdio.h>
@@ -34,7 +34,7 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <errno.h>
-#include <time.h>
+#include <time.h> //CLOCK_MONOTONIC
 
 /******************************************************************************
  * PRIVATE TYPE DEFINITION
@@ -43,8 +43,8 @@
 /******************************************************************************
  * PRIVATE DEFINES
  ******************************************************************************/
-#define container_of(ptr, type, member) ({                      \
-        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+#define container_of(ptr, type, member) ({                          \
+        const __typeof__( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)((char *)__mptr - offsetof(type,member)); })
 
 /******************************************************************************
@@ -89,7 +89,7 @@ void COLnxSktCanInit(CO_LNX_SKTCAN *self, const char *if_name)
 
 static void DrvCanInit(const CO_IF_CAN_DRV *super)
 {
-    printf("%s\n", __func__);
+    printf("[DEBUG] in %s\n", __func__);
 
     CO_LNX_SKTCAN *self = container_of(super, CO_LNX_SKTCAN, super);
     self->CanSocket = socket(PF_CAN, SOCK_RAW, CAN_RAW);
@@ -160,7 +160,7 @@ static void DrvCanInit(const CO_IF_CAN_DRV *super)
 
 static void DrvCanEnable(const CO_IF_CAN_DRV *super, uint32_t baudrate)
 {
-    printf("%s\n", __func__);
+    printf("[DEBUG] in %s\n", __func__);
 
     /* Currently CAN socket needs to be enabled beforehand via command line
 
@@ -202,13 +202,14 @@ static int16_t DrvCanSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
     // Measure elapsed time
     clock_gettime(CLOCK_MONOTONIC, &end);
     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    printf("time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
+    printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
 #endif
     return sizeof(CO_IF_FRM);
 }
 
 /**
  * Send CAN frame in non-blocking mode
+ * @see COIfCanSend
  * @details
  * If open a large tx buffer which ensure sufficient for 1 rt cycle, non-blocking write may always success.
  * Curret expm show no significant different with blocking version.
@@ -246,11 +247,14 @@ static int16_t DrvCanNBSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
     // Measure elapsed time
     clock_gettime(CLOCK_MONOTONIC, &end);
     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    printf("time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
+    printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
 #endif
     return sizeof(CO_IF_FRM);
 }
 
+/**
+ * @see COIfCanRead
+ */
 static int16_t DrvCanRead(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
 {
     struct can_frame frame = {0};
@@ -289,7 +293,7 @@ static int16_t DrvCanRead(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
 
 static void DrvCanReset(const CO_IF_CAN_DRV *super)
 {
-    printf("%s\n", __func__);
+    printf("[DEBUG] in %s\n", __func__);
 
     CO_LNX_SKTCAN *self = container_of(super, CO_LNX_SKTCAN, super);
 
@@ -299,7 +303,7 @@ static void DrvCanReset(const CO_IF_CAN_DRV *super)
 
 static void DrvCanClose(const CO_IF_CAN_DRV *super)
 {
-    printf("%s\n", __func__);
+    printf("[DEBUG] in %s\n", __func__);
 
     CO_LNX_SKTCAN *self = container_of(super, CO_LNX_SKTCAN, super);
 

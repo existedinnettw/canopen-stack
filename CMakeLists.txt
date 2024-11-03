@@ -19,14 +19,14 @@
 #
 cmake_minimum_required(VERSION 3.20)     # buildPresets is introduced in 3.20
 project(canopen-stack)
-enable_language(C ASM)
+enable_language(C CXX ASM)
 enable_testing()
 
 #---
 # project wide setup
 #
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-# set(CMAKE_C_STANDARD 99) #I need offset_of
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 

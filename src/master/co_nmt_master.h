@@ -19,14 +19,6 @@ extern "C"
      * PuBLIC INCLUDES
      ******************************************************************************/
 
-#define CO_NMT_ALLOWED 0x01  /*!< indication of NMT transfers allowed    */
-#define CO_BOOT_ALLOWED 0x02 /*!< indication of BOOT transfers allowed   */
-#define CO_EMCY_ALLOWED 0x04 /*!< indication of EMCY transfers allowed   */
-#define CO_TIME_ALLOWED 0x08 /*!< indication of TIME transfers allowed   */
-#define CO_SYNC_ALLOWED 0x10 /*!< indication of SYNC transfers allowed   */
-#define CO_SDO_ALLOWED 0x20  /*!< indication of SDO transfers allowed    */
-#define CO_PDO_ALLOWED 0x40  /*!< indication of PDO transfers allowed    */
-
     /******************************************************************************
      * PUBLIC TYPES
      ******************************************************************************/

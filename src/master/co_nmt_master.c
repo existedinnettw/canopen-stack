@@ -78,15 +78,10 @@ CO_NMT_sendCommand(CO_NODE *node, CO_NMT_command_t command, uint8_t nodeID)
     CO_IF_FRM frm;
     /* build NMT protocol frame  */
     CO_SET_ID(&frm, 0x000);
-    /* 'start remote node' */
+    /* command node */
     CO_SET_BYTE(&frm, (uint8_t)command, 0);
-    printf("nodeID:0x%x\n", nodeID);
     CO_SET_BYTE(&frm, nodeID, 1);
     CO_SET_DLC(&frm, 2);
-    for (int i = 0; i < 8; i++)
-    {
-        printf("0x%x\n", frm.Data[i]);
-    }
 
     (void)COIfCanSend(&(node->If), &frm); /* send NMT command  */
     return CO_ERR_NONE;

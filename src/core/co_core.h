@@ -56,7 +56,6 @@ extern "C" {
 #include "co_if.h"
 #include "co_emcy.h"
 #include "co_nmt.h"
-#include "co_nmt_master.h"
 #include "co_tmr.h"
 #include "co_sdo.h"
 #include "co_ssdo.h"

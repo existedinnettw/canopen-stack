@@ -101,6 +101,20 @@ extern "C"{
 #define CO_SDO_ERR_OBJ_MAP_N    0x06040042    /*!< Number and length exceed PDO           */
 #define CO_SDO_ERR_PARA_INCOMP  0x06040043    /*!< parameter incompatibility reason       */
 #define CO_SDO_ERR_GENERAL      0x08000000    /*!< General error                          */
+#define CO_SDO_ERR_DATA         0x08000020    /*!< Data cannot be transferred or stored to*/
+                                              /*   the application                        */
+#define CO_SDO_ERR_DATA_LOCAL   0x08000021    /*!< Data cannot be transferred or stored to*/
+                                              /*   the application because of local       */
+                                              /*   control                                */
+#define CO_SDO_ERR_DATA_STATE   0x08000022    /*!< Data cannot be transferred or stored to*/
+                                              /*   the application because of the present */
+                                              /*   device state                           */
+#define CO_SDO_ERR_OD_NA        0x08000023    /*!< Object dictionary dynamic generation   */
+                                              /*   fails or no object dictionary is       */
+                                              /*   present (e.g. object dictionary is     */
+                                              /*   generated from file and generation     */
+                                              /*   fails because of an file error).       */
+#define CO_SDO_ERR_DATA_NA      0x08000024    /*!< No data available                      */
 
 #define CO_SDO_BUF_SEG     127
 #define CO_SDO_BUF_BYTE    (CO_SDO_BUF_SEG*7) /*!< transfer buffer size in byte           */

@@ -1,3 +1,4 @@
+# cmake-format: off
 #******************************************************************************
 #   Copyright 2020 Embedded Office GmbH & Co. KG
 #
@@ -47,7 +48,6 @@ target_sources(canopen-stack
     core/co_core.c
     core/co_dict.c
     core/co_nmt.c
-    core/co_nmt_master.c
     core/co_obj.c
     core/co_tmr.c
     core/co_ver.c
@@ -93,3 +93,10 @@ target_sources(canopen-stack
     # - CiA305
     service/cia305/co_lss.c
 )
+
+
+# cmake-format: on
+add_library(canopen-stack-master master/co_nmt_master.c master/co_master.cpp)
+target_compile_options(canopen-stack-master PRIVATE "-std=c++17")
+target_link_libraries(canopen-stack-master PUBLIC canopen-stack)
+target_include_directories(canopen-stack-master PUBLIC master)

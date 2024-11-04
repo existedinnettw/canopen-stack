@@ -20,7 +20,6 @@
 
 #include "clock_spec.hpp"
 /* select application drivers: */
-#include "drv_can_sim.h"       /* CAN driver                  */
 #include "drv_timer_swcycle.h" /* Timer driver                */
 #include "drv_nvm_sim.h"       /* NVM driver                  */
 
@@ -85,7 +84,7 @@ const uint32_t Obj1A00_03_20 = CO_LINK(0x2100, 0x03, 8);  // sec
 static struct CO_OBJ_T ClockOD[APP_OBJ_N] = {
     {CO_KEY(0x1000, 0, CO_OBJ_____R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1000_00_20)},
     {CO_KEY(0x1001, 0, CO_OBJ_____R_), CO_TUNSIGNED8, (CO_DATA)(&Obj1001_00_08)}, // error register is force
-    {CO_KEY(0x1005, 0, CO_OBJ_____RW), CO_TSYNC_ID, (CO_DATA)(&obj1005)},   //direct storage may simplly
+    {CO_KEY(0x1005, 0, CO_OBJ_____RW), CO_TSYNC_ID, (CO_DATA)(&obj1005)},         // direct storage may simplly
     {CO_KEY(0x1006, 0, CO_OBJ_____RW), CO_TSYNC_CYCLE, (CO_DATA)(&obj1006)},
 
     {CO_KEY(0x1014, 0, CO_OBJ_____R_), CO_TEMCY_ID, (CO_DATA)(&Obj1014_00_20)},
@@ -97,22 +96,22 @@ static struct CO_OBJ_T ClockOD[APP_OBJ_N] = {
     {CO_KEY(0x1018, 3, CO_OBJ_____R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1018_03_20)},
     {CO_KEY(0x1018, 4, CO_OBJ_____R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1018_04_20)},
 
+    // SDO server parameter
     {CO_KEY(0x1200, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(2)},
     {CO_KEY(0x1200, 1, CO_OBJ__N__R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1200_01_20)},
     {CO_KEY(0x1200, 2, CO_OBJ__N__R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1200_02_20)},
 
     // SDO client parameter
     // add for expm, sdo
-    {CO_KEY(0x1280 + (0), 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(3)}, // , CO_TUNSIGNED8, (CO_DATA)(val)
-    {CO_KEY(0x1280 + (0), 1, CO_OBJ_____RW), CO_TSDO_ID, (CO_DATA)(&Obj1280_01_20)},
-    {CO_KEY(0x1280 + (0), 2, CO_OBJ_____RW), CO_TSDO_ID, (CO_DATA)(&Obj1280_02_20)},
-    {CO_KEY(0x1280 + (0), 3, CO_OBJ_____RW), CO_TUNSIGNED8, (CO_DATA)(&serverId)},
+    {CO_KEY(0x1280, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(3)}, // , CO_TUNSIGNED8, (CO_DATA)(val)
+    {CO_KEY(0x1280, 1, CO_OBJ_____RW), CO_TSDO_ID, (CO_DATA)(&Obj1280_01_20)},
+    {CO_KEY(0x1280, 2, CO_OBJ_____RW), CO_TSDO_ID, (CO_DATA)(&Obj1280_02_20)},
+    {CO_KEY(0x1280, 3, CO_OBJ_____RW), CO_TUNSIGNED8, (CO_DATA)(&serverId)},
     // end expm
 
     // rxpdo parameter
     {CO_KEY(0x1400, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(2)},           // highest sub idx
     {CO_KEY(0x1400, 1, CO_OBJ_____R_), CO_TPDO_ID, (CO_DATA)(&Obj1400_01_20)}, // COB-ID used by RPDO
-    // transmission type: async(FE), sync (01) not work
     {CO_KEY(0x1400, 2, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(0xFE)},
 
     // self rxpdo
@@ -123,9 +122,6 @@ static struct CO_OBJ_T ClockOD[APP_OBJ_N] = {
     // txpdo parameter
     {CO_KEY(0x1800, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(2)},           // highest sub idx
     {CO_KEY(0x1800, 1, CO_OBJ_____R_), CO_TPDO_ID, (CO_DATA)(&Obj1800_01_20)}, // COB-ID used by TPDO
-    // transmission type: sync(01), seems still async, need COTPdoInit, CO_TPDO_ID+ODAdd?
-    // ref OBJ18XX_1
-    // check COPdoSyncUpdate
     {CO_KEY(0x1800, 2, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(0x01)},
 
     // self txpdo
@@ -134,10 +130,11 @@ static struct CO_OBJ_T ClockOD[APP_OBJ_N] = {
     {CO_KEY(0x1A00, 2, CO_OBJ_____R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1A00_02_20)},
     {CO_KEY(0x1A00, 3, CO_OBJ_____R_), CO_TUNSIGNED32, (CO_DATA)(&Obj1A00_03_20)},
 
+    // user entries
     {CO_KEY(0x2100, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(3)},
     {CO_KEY(0x2100, 1, CO_OBJ____PR_), CO_TUNSIGNED32, (CO_DATA)(&Obj2100_01_20)},
     {CO_KEY(0x2100, 2, CO_OBJ____PR_), CO_TUNSIGNED8, (CO_DATA)(&Obj2100_02_08)},
-    {CO_KEY(0x2100, 3, CO_OBJ____PR_), CO_TUNSIGNED8, (CO_DATA)(&Obj2100_03_08)}, //remove A to prevent trigger ASYNCHRONOUSLY
+    {CO_KEY(0x2100, 3, CO_OBJ____PR_), CO_TUNSIGNED8, (CO_DATA)(&Obj2100_03_08)}, // remove A to prevent trigger ASYNCHRONOUSLY
 
     {CO_KEY(0x2200, 0, CO_OBJ____PR_), CO_TUNSIGNED16, (CO_DATA)(&Obj2200_00_10)},
 
@@ -160,7 +157,7 @@ static uint8_t SdoSrvMem[CO_SSDO_N * CO_SDO_BUF_BYTE];
  * your specific hardware functionality.
  */
 static struct CO_IF_DRV_T AppDriver = {
-    &SimCanDriver,
+    nullptr,    // init later
     &SwCycleTimerDriver,
     &SimNvmDriver};
 

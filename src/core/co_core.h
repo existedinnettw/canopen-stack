@@ -81,6 +81,7 @@ extern "C" {
 typedef struct CO_NODE_T {
     struct CO_DICT_T       Dict;                 /*!< Object dictionary      */
     struct CO_IF_T         If;                   /*!< Can driver interface   */
+    struct CO_IF_CAN_DRV  *Internel_can;      /*!< Can Internal interface */
     struct CO_EMCY_T       Emcy;                 /*!< Node error status      */
     struct CO_NMT_T        Nmt;                  /*!< Network management     */
     struct CO_TMR_T        Tmr;                  /*!< Timer manager          */

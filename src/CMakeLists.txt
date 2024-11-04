@@ -32,6 +32,7 @@ target_include_directories(canopen-stack
     object/cia301
     service/cia301
     service/cia305
+    driver/loopback
     driver/socketcan
     driver/swcycle
 )
@@ -57,6 +58,7 @@ target_sources(canopen-stack
     hal/co_if_nvm.c
     hal/co_if_timer.c
     # driver
+    driver/loopback/drv_can_loop.c
     driver/socketcan/drv_can_socketcan.c
     driver/swcycle/drv_timer_swcycle.c
 

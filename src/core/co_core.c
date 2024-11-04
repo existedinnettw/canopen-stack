@@ -20,6 +20,8 @@
 
 #include "co_core.h"
 
+#include "../driver/loopback/drv_can_loop.h"
+
 /******************************************************************************
 * FUNCTIONS
 ******************************************************************************/
@@ -33,6 +35,7 @@ void CONodeInit(CO_NODE *node, CO_NODE_SPEC *spec)
     CO_ERR  err;
 
     node->If.Drv   = spec->Drv;
+    node->Internel_can = &LoopCanDriver;
     node->SdoBuf   = spec->SdoBuf;
     node->Baudrate = spec->Baudrate;
     node->NodeId   = spec->NodeId;
@@ -45,6 +48,7 @@ void CONodeInit(CO_NODE *node, CO_NODE_SPEC *spec)
     }
 #endif //USE_LSS
     COIfInit(&node->If, node, spec->TmrFreq);
+    node->Internel_can->Init(node->Internel_can);
     COTmrInit(&node->Tmr, node, spec->TmrMem, spec->TmrNum, spec->TmrFreq);
     num = CODictInit(&node->Dict, node, spec->Dict, spec->DictLen);
     if (num < 0) {
@@ -67,6 +71,7 @@ void CONodeInit(CO_NODE *node, CO_NODE_SPEC *spec)
             node->Error = CO_ERR_OBJ_INIT;
         }
         COIfCanEnable(&node->If, node->Baudrate);
+        node->Internel_can->Enable(node->Internel_can, node->Baudrate);
     }
 }
 
@@ -122,9 +127,17 @@ void CONodeProcess(CO_NODE *node)
     uint8_t   allowed;
 
     result = COIfCanRead(&node->If, &frm);
-    if (result <= 0) {
-        allowed = 0;
-    } else {
+    if (result < 0) {
+        // pass
+        printf("[WARN] COIfCanRead with CO_ERR_IF_CAN_READ error and with internel Error code %d\n", result);
+    }
+    else if (result == 0){
+        //the most shown case
+        result = node->Internel_can->Read(node->Internel_can, &frm);
+    }
+    
+    if(result > 0){
+        // print_frame(frm);
         allowed = node->Nmt.Allowed;
 #if USE_LSS
         result  = COLssCheck(&node->Lss, &frm);
@@ -135,6 +148,8 @@ void CONodeProcess(CO_NODE *node)
             allowed = 0;
         }
 #endif //USE_LSS
+    }else{
+        allowed = 0;
     }
 
     if ((allowed & CO_SDO_ALLOWED) != (uint8_t)0) {

@@ -14,8 +14,8 @@
    limitations under the License.
 ******************************************************************************/
 
-#ifndef CO_CAN_SIM_H_
-#define CO_CAN_SIM_H_
+#ifndef CO_CAN_LOOP_H_
+#define CO_CAN_LOOP_H_
 
 #ifdef __cplusplus               /* for compatibility with C++ environments  */
 extern "C" {
@@ -31,27 +31,27 @@ extern "C" {
 * PUBLIC TYPES
 ******************************************************************************/
 
-typedef void (*SIM_CAN_IRQ)(void);
+// typedef void (*SIM_CAN_IRQ)(void);
 
 /******************************************************************************
 * PUBLIC SYMBOLS
 ******************************************************************************/
 
-extern const CO_IF_CAN_DRV SimCanDriver;
+extern const CO_IF_CAN_DRV LoopCanDriver;
 
 /******************************************************************************
 * SPECIAL PUBLIC DRIVER FUNCTIONS
 ******************************************************************************/
 
 /* CAN Bus Simulation Interface (for interfacing with automated tests only) */
-int16_t     SimCanGetFrm    (uint8_t *buf, uint16_t size);
-int16_t     SimCanSetFrm    (uint32_t Identifier, uint8_t DLC,
-                             uint8_t Byte0, uint8_t Byte1, uint8_t Byte2,
-                             uint8_t Byte3, uint8_t Byte4, uint8_t Byte5,
-                             uint8_t Byte6, uint8_t Byte7);
-void        SimCanSetIsr    (SIM_CAN_IRQ handler);
-void        SimCanRun       (void);
-void        SimCanFlush     (void);
+// int16_t     SimCanGetFrm    (uint8_t *buf, uint16_t size);
+// int16_t     SimCanSetFrm    (uint32_t Identifier, uint8_t DLC,
+//                              uint8_t Byte0, uint8_t Byte1, uint8_t Byte2,
+//                              uint8_t Byte3, uint8_t Byte4, uint8_t Byte5,
+//                              uint8_t Byte6, uint8_t Byte7);
+// void        SimCanSetIsr    (SIM_CAN_IRQ handler);
+// void        SimCanRun       (void);
+void        LoopCanFlush     (void);
 
 #ifdef __cplusplus               /* for compatibility with C++ environments  */
 }

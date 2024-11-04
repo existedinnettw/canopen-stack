@@ -18,7 +18,7 @@
 * INCLUDES
 ******************************************************************************/
 
-#include "drv_can_sim.h"
+#include "drv_can_loop.h"
 
 /******************************************************************************
 * PRIVATE DEFINES
@@ -35,8 +35,8 @@
 * PRIVATE TYPES
 ******************************************************************************/
 
-typedef struct SIM_CAN_BUS_T {
-    struct SIM_CAN_BUS_T *Addr;
+typedef struct LOOP_CAN_BUS_T {
+    struct LOOP_CAN_BUS_T *Addr;
     uint32_t              Status;
     uint32_t              Baudrate;
     uint32_t              TxOvr;
@@ -45,16 +45,16 @@ typedef struct SIM_CAN_BUS_T {
     CO_IF_FRM            *RxWr;
     CO_IF_FRM            *TxRd;
     CO_IF_FRM            *TxWr;
-    CO_IF_FRM             RxQ[SIM_CAN_Q_LEN];
+    // CO_IF_FRM            *RxQ;                //use TxQ memory
     CO_IF_FRM             TxQ[SIM_CAN_Q_LEN];
-    SIM_CAN_IRQ           Handler;
-} SIM_CAN_BUS;
+    // SIM_CAN_IRQ           Handler;
+} LOOP_CAN_BUS;
 
 /******************************************************************************
 * PRIVATE VARIABLES
 ******************************************************************************/
 
-static SIM_CAN_BUS CanBus = { 0u };
+static LOOP_CAN_BUS CanBus = { 0u };
 
 /******************************************************************************
 * PRIVATE FUNCTIONS
@@ -71,7 +71,7 @@ static void    DrvCanClose  (const CO_IF_CAN_DRV*);
 * PUBLIC VARIABLE
 ******************************************************************************/
 
-const CO_IF_CAN_DRV SimCanDriver = {
+const CO_IF_CAN_DRV LoopCanDriver = {
     DrvCanInit,
     DrvCanEnable,
     DrvCanRead,
@@ -86,7 +86,7 @@ const CO_IF_CAN_DRV SimCanDriver = {
 
 static void DrvCanInit(const CO_IF_CAN_DRV*)
 {
-    SIM_CAN_BUS *bus = &CanBus;
+    LOOP_CAN_BUS *bus = &CanBus;
 
     if (bus->Addr == bus) {                           /* reset init state    */
         bus->Status = SIM_CAN_STAT_INIT; 
@@ -97,15 +97,15 @@ static void DrvCanInit(const CO_IF_CAN_DRV*)
     bus->Baudrate = 0u;
     bus->TxOvr    = 0u;
     bus->RxOvr    = 0u;
-    bus->RxWr     = &bus->RxQ[0u];
-    bus->RxRd     = &bus->RxQ[0u];
+    // bus->RxWr     = &bus->RxQ[0u];
+    // bus->RxRd     = &bus->RxQ[0u];
     bus->TxWr     = &bus->TxQ[0u];
     bus->TxRd     = &bus->TxQ[0u];
 }
 
 static void DrvCanEnable(const CO_IF_CAN_DRV*, uint32_t baudrate)
 {
-    SIM_CAN_BUS *bus = &CanBus;
+    LOOP_CAN_BUS *bus = &CanBus;
 
     bus->Status   |= SIM_CAN_STAT_ACTIVE;
     bus->Baudrate  = baudrate;
@@ -114,7 +114,7 @@ static void DrvCanEnable(const CO_IF_CAN_DRV*, uint32_t baudrate)
 static int16_t DrvCanSend(const CO_IF_CAN_DRV*, CO_IF_FRM *frm)
 {
     int16_t       result = 0u;
-    SIM_CAN_BUS  *bus    = &CanBus;;
+    LOOP_CAN_BUS  *bus    = &CanBus;;
     CO_IF_FRM    *tx;
     uint8_t       byte;
     
@@ -145,29 +145,34 @@ static int16_t DrvCanSend(const CO_IF_CAN_DRV*, CO_IF_FRM *frm)
     return (result);
 }
 
+/**
+ * @details
+ * implement replaced by SimCanGetFrm
+ */
 static int16_t DrvCanRead (const CO_IF_CAN_DRV*, CO_IF_FRM *frm)
 {
     int16_t       result = 0u;
-    SIM_CAN_BUS  *bus    = &CanBus;
-    CO_IF_FRM    *rx;
+    LOOP_CAN_BUS  *bus    = &CanBus;
+    // CO_IF_FRM    *rx;
+    CO_IF_FRM      *tx;
     uint8_t       byte;
 
     if ((bus->Status & SIM_CAN_STAT_ACTIVE) == 0u) {   /* CAN bus is passive */
         return ((int16_t)-1u);
     }
 
-    if (bus->RxRd != bus->RxWr) {                  /* CAN frame is available */
-        rx = bus->RxRd;
-        bus->RxRd++;
-        if (bus->RxRd >= &bus->RxQ[SIM_CAN_Q_LEN]) {
-            bus->RxRd = &bus->RxQ[0u];
+    if (bus->TxRd != bus->TxWr) {
+        tx = bus->TxRd;
+        bus->TxRd++;
+        if (bus->TxRd >= &bus->TxQ[SIM_CAN_Q_LEN]) {
+            bus->TxRd = &bus->TxQ[0u];
         }
 
-        frm->Identifier = rx->Identifier;
-        frm->DLC        = rx->DLC;
+        frm->Identifier = tx->Identifier;
+        frm->DLC        = tx->DLC;
         for (byte = 0u; byte < 8u; byte++) {
             if (frm->DLC > byte) {
-                frm->Data[byte] = rx->Data[byte] & 0xFFu;
+                frm->Data[byte] = tx->Data[byte] & 0xFFu;
             } else {
                 frm->Data[byte] = 0u;
             }
@@ -179,16 +184,16 @@ static int16_t DrvCanRead (const CO_IF_CAN_DRV*, CO_IF_FRM *frm)
 
 static void DrvCanReset(const CO_IF_CAN_DRV*)
 {
-    SIM_CAN_BUS *bus      = &CanBus;
+    LOOP_CAN_BUS *bus      = &CanBus;
     uint32_t     baudrate = bus->Baudrate;
 
-    DrvCanInit(&SimCanDriver);
-    DrvCanEnable(&SimCanDriver, baudrate);
+    DrvCanInit(&LoopCanDriver);
+    DrvCanEnable(&LoopCanDriver, baudrate);
 }
 
 static void DrvCanClose(const CO_IF_CAN_DRV*)
 {
-    SIM_CAN_BUS *bus = &CanBus;
+    LOOP_CAN_BUS *bus = &CanBus;
 
     bus->Status &= ~SIM_CAN_STAT_ACTIVE;
 }
@@ -197,96 +202,96 @@ static void DrvCanClose(const CO_IF_CAN_DRV*)
 * SPECIAL PUBLIC FUNCTIONS
 ******************************************************************************/
 
-int16_t SimCanGetFrm(uint8_t *buf, uint16_t size)
+// int16_t SimCanGetFrm(uint8_t *buf, uint16_t size)
+// {
+//     int16_t         result = 0u;
+//     LOOP_CAN_BUS    *bus    = &CanBus;
+//     CO_IF_FRM      *tx;
+//     CO_IF_FRM      *frm;
+
+//     if (bus->TxRd != bus->TxWr) {
+//         tx = bus->TxRd;
+//         bus->TxRd++;
+//         if (bus->TxRd >= &bus->TxQ[SIM_CAN_Q_LEN]) {
+//             bus->TxRd = &bus->TxQ[0u];
+//         }
+
+//         if ((size >= sizeof(CO_IF_FRM)) &&
+//             (buf  != NULL             )) {
+//             frm             = (CO_IF_FRM*)buf;
+//             frm->Identifier = tx->Identifier;
+//             frm->DLC        = tx->DLC;
+//             frm->Data[0u]   = tx->Data[0u] & 0xFFu;
+//             frm->Data[1u]   = tx->Data[1u] & 0xFFu;
+//             frm->Data[2u]   = tx->Data[2u] & 0xFFu;
+//             frm->Data[3u]   = tx->Data[3u] & 0xFFu;
+//             frm->Data[4u]   = tx->Data[4u] & 0xFFu;
+//             frm->Data[5u]   = tx->Data[5u] & 0xFFu;
+//             frm->Data[6u]   = tx->Data[6u] & 0xFFu;
+//             frm->Data[7u]   = tx->Data[7u] & 0xFFu;
+//         }
+
+//         result = 1u;
+//     }
+
+//     return (result);
+// }
+
+// int16_t SimCanSetFrm (uint32_t Identifier, uint8_t DLC,
+//                   uint8_t Byte0, uint8_t Byte1, uint8_t Byte2, uint8_t Byte3,
+//                   uint8_t Byte4, uint8_t Byte5, uint8_t Byte6, uint8_t Byte7)
+// {
+//     int16_t       result = 0u;
+//     LOOP_CAN_BUS  *bus    = &CanBus;
+//     CO_IF_FRM    *rx;
+
+//     rx = bus->RxWr;
+//     bus->RxWr++;
+//     if (bus->RxWr >= &bus->RxQ[SIM_CAN_Q_LEN]) {
+//         bus->RxWr = &bus->RxQ[0u];
+//     }
+//     if (bus->RxWr == bus->RxRd) {
+//         bus->RxOvr++;
+//         bus->RxWr = rx;
+//     } else {
+//         rx->Identifier = Identifier;
+//         rx->DLC        = DLC;
+//         rx->Data[0u]   = Byte0 & 0xFFu;
+//         rx->Data[1u]   = Byte1 & 0xFFu;
+//         rx->Data[2u]   = Byte2 & 0xFFu;
+//         rx->Data[3u]   = Byte3 & 0xFFu;
+//         rx->Data[4u]   = Byte4 & 0xFFu;
+//         rx->Data[5u]   = Byte5 & 0xFFu;
+//         rx->Data[6u]   = Byte6 & 0xFFu;
+//         rx->Data[7u]   = Byte7 & 0xFFu;
+//         result         = sizeof(CO_IF_FRM);
+//     }
+
+//     return (result);
+// }
+
+// void SimCanSetIsr(SIM_CAN_IRQ handler)
+// {
+//     LOOP_CAN_BUS *bus = &CanBus;
+
+//     bus->Handler = handler;
+// }
+
+// void SimCanRun(void)
+// {
+//     LOOP_CAN_BUS *bus = &CanBus;
+
+//     while (bus->RxRd != bus->RxWr) {
+//         bus->Handler();
+//     }
+// }
+
+void LoopCanFlush (void)
 {
-    int16_t         result = 0u;
-    SIM_CAN_BUS    *bus    = &CanBus;
-    CO_IF_FRM      *tx;
-    CO_IF_FRM      *frm;
+    LOOP_CAN_BUS *bus = &CanBus;
 
-    if (bus->TxRd != bus->TxWr) {
-        tx = bus->TxRd;
-        bus->TxRd++;
-        if (bus->TxRd >= &bus->TxQ[SIM_CAN_Q_LEN]) {
-            bus->TxRd = &bus->TxQ[0u];
-        }
-
-        if ((size >= sizeof(CO_IF_FRM)) &&
-            (buf  != NULL             )) {
-            frm             = (CO_IF_FRM*)buf;
-            frm->Identifier = tx->Identifier;
-            frm->DLC        = tx->DLC;
-            frm->Data[0u]   = tx->Data[0u] & 0xFFu;
-            frm->Data[1u]   = tx->Data[1u] & 0xFFu;
-            frm->Data[2u]   = tx->Data[2u] & 0xFFu;
-            frm->Data[3u]   = tx->Data[3u] & 0xFFu;
-            frm->Data[4u]   = tx->Data[4u] & 0xFFu;
-            frm->Data[5u]   = tx->Data[5u] & 0xFFu;
-            frm->Data[6u]   = tx->Data[6u] & 0xFFu;
-            frm->Data[7u]   = tx->Data[7u] & 0xFFu;
-        }
-
-        result = 1u;
-    }
-
-    return (result);
-}
-
-int16_t SimCanSetFrm (uint32_t Identifier, uint8_t DLC,
-                  uint8_t Byte0, uint8_t Byte1, uint8_t Byte2, uint8_t Byte3,
-                  uint8_t Byte4, uint8_t Byte5, uint8_t Byte6, uint8_t Byte7)
-{
-    int16_t       result = 0u;
-    SIM_CAN_BUS  *bus    = &CanBus;
-    CO_IF_FRM    *rx;
-
-    rx = bus->RxWr;
-    bus->RxWr++;
-    if (bus->RxWr >= &bus->RxQ[SIM_CAN_Q_LEN]) {
-        bus->RxWr = &bus->RxQ[0u];
-    }
-    if (bus->RxWr == bus->RxRd) {
-        bus->RxOvr++;
-        bus->RxWr = rx;
-    } else {
-        rx->Identifier = Identifier;
-        rx->DLC        = DLC;
-        rx->Data[0u]   = Byte0 & 0xFFu;
-        rx->Data[1u]   = Byte1 & 0xFFu;
-        rx->Data[2u]   = Byte2 & 0xFFu;
-        rx->Data[3u]   = Byte3 & 0xFFu;
-        rx->Data[4u]   = Byte4 & 0xFFu;
-        rx->Data[5u]   = Byte5 & 0xFFu;
-        rx->Data[6u]   = Byte6 & 0xFFu;
-        rx->Data[7u]   = Byte7 & 0xFFu;
-        result         = sizeof(CO_IF_FRM);
-    }
-
-    return (result);
-}
-
-void SimCanSetIsr(SIM_CAN_IRQ handler)
-{
-    SIM_CAN_BUS *bus = &CanBus;
-
-    bus->Handler = handler;
-}
-
-void SimCanRun(void)
-{
-    SIM_CAN_BUS *bus = &CanBus;
-
-    while (bus->RxRd != bus->RxWr) {
-        bus->Handler();
-    }
-}
-
-void SimCanFlush (void)
-{
-    SIM_CAN_BUS *bus = &CanBus;
-
-    bus->RxWr  = &bus->RxQ[0u];
-    bus->RxRd  = &bus->RxQ[0u];
+    // bus->RxWr  = &bus->RxQ[0u];
+    // bus->RxRd  = &bus->RxQ[0u];
     bus->TxWr  = &bus->TxQ[0u];
     bus->TxRd  = &bus->TxQ[0u];
 }

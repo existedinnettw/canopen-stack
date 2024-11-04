@@ -115,12 +115,6 @@ static void AppClock(void *p_arg)
     printf("app clock called\n");
 }
 
-static void sig_handler(int _)
-{
-    (void)_;
-    keep_running = 0;
-}
-
 struct timespec
 timespec_add(struct timespec time1, struct timespec time2)
 {
@@ -173,7 +167,7 @@ void *rt_cb(void *args)
 void handle_error_en(int err, const char *msg)
 {
     errno = err;
-    printf("[ERROR] %s\n", msg, strerror(errno));
+    printf("[ERROR] %s\n", msg);
     exit(EXIT_FAILURE);
 }
 
@@ -212,8 +206,15 @@ void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t cod
     }
 }
 
-void COPdoTransmit(CO_IF_FRM *frm){
-    printf("[DEBUG] tpdo will transmit\n");
+// void COPdoTransmit(CO_IF_FRM *frm){
+//     printf("[DEBUG] tpdo will transmit\n");
+// }
+
+static void sig_handler(int _)
+{
+    (void)_;
+    keep_running = 0;
+    exit(EXIT_FAILURE);
 }
 
 /******************************************************************************
@@ -283,7 +284,7 @@ int main(void)
     }
     // printf("[DEBUG] sending sdo request to NodeId: %u\n", csdo->NodeId); //access nodeId is wrong
 
-    uint32_t timeout = 5000;
+    uint32_t timeout = 500;
     err = CO_ERR_NONE;
 
     // read sync message by 0x1005
@@ -315,7 +316,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     };
     printf("[INFO] sdo send 0x1005 success\n");
@@ -342,7 +343,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     };
     printf("[INFO] sdo send 0x1017 success\n");
@@ -372,7 +373,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x180002 success\n");
@@ -397,7 +398,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x1A0000 success\n");
@@ -425,7 +426,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x1A0001 success\n");
@@ -450,7 +451,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x1A0000 success\n");
@@ -475,7 +476,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x140002 success\n");
@@ -499,7 +500,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x160000 success\n");
@@ -527,7 +528,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x160001 success\n");
@@ -552,7 +553,7 @@ int main(void)
         }
         struct timespec ts1 = {
             .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(20e6)};
+            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
         nanosleep(&ts1, NULL);
     }
     printf("[INFO] sdo send 0x160000 success\n");

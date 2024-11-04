@@ -167,4 +167,5 @@ void COSyncProdSend(void *parg) {
     CO_SET_DLC(&frm, 0);
 
     (void)COIfCanSend(&sync->Node->If, &frm);
+    (void)sync->Node->Internel_can->Send(sync->Node->Internel_can, &frm);
 }

@@ -31,12 +31,15 @@
 #include <pthread.h> //posix
 #include <time.h>    //posix
 #include <signal.h>  //posix
+
 #ifdef __cplusplus
-#include <atomic>
-using namespace std;
+// #include <atomic>
+#include <csignal>
+using std::sig_atomic_t;
 #else
 #include <stdatomic.h>
 #endif
+
 #include <errno.h>
 
 #include <stdio.h>
@@ -188,6 +191,9 @@ void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t cod
         // store the value
         break;
     // decode based on abort code
+    case CO_SDO_ERR_TIMEOUT:
+        printf("[WARN] SDO protocol timed out\n");
+        break;
     case CO_SDO_ERR_OBJ:
         printf("[WARN] Object doesn't exist in target dictionary\n");
         break;
@@ -272,6 +278,9 @@ int main(void)
     }
 
     // config other nodes
+    printf("[DEBUG] set PREOP\n");
+    CO_NMT_sendCommand(&Clk, CO_NMT_ENTER_PRE_OPERATIONAL, 0x02);
+
     CO_CSDO *csdo;
     csdo = COCSdoFind(&Clk, 0x0);
     if (csdo == 0)
@@ -350,8 +359,6 @@ int main(void)
     // how to get response?
 
     // config pdo by sdo
-    printf("[DEBUG] set PREOP\n");
-    CO_NMT_sendCommand(&Clk, CO_NMT_ENTER_PRE_OPERATIONAL, 0x02);
 
     // --- config pdo mapping
     uint8_t txpdo_trans_type = 0x01;

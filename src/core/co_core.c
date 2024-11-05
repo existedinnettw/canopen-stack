@@ -20,8 +20,6 @@
 
 #include "co_core.h"
 
-#include "../driver/loopback/drv_can_loop.h"
-
 /******************************************************************************
 * FUNCTIONS
 ******************************************************************************/
@@ -35,7 +33,6 @@ void CONodeInit(CO_NODE *node, CO_NODE_SPEC *spec)
     CO_ERR  err;
 
     node->If.Drv   = spec->Drv;
-    node->Internel_can = &LoopCanDriver;
     node->SdoBuf   = spec->SdoBuf;
     node->Baudrate = spec->Baudrate;
     node->NodeId   = spec->NodeId;
@@ -48,7 +45,7 @@ void CONodeInit(CO_NODE *node, CO_NODE_SPEC *spec)
     }
 #endif //USE_LSS
     COIfInit(&node->If, node, spec->TmrFreq);
-    node->Internel_can->Init(node->Internel_can);
+    lwrb_init(&node->Rxed_q, node->Rxed_q_data, sizeof(node->Rxed_q_data));
     COTmrInit(&node->Tmr, node, spec->TmrMem, spec->TmrNum, spec->TmrFreq);
     num = CODictInit(&node->Dict, node, spec->Dict, spec->DictLen);
     if (num < 0) {
@@ -71,7 +68,6 @@ void CONodeInit(CO_NODE *node, CO_NODE_SPEC *spec)
             node->Error = CO_ERR_OBJ_INIT;
         }
         COIfCanEnable(&node->If, node->Baudrate);
-        node->Internel_can->Enable(node->Internel_can, node->Baudrate);
     }
 }
 
@@ -111,6 +107,31 @@ CO_ERR CONodeGetErr(CO_NODE *node)
     return (result);
 }
 
+/**
+ * @private
+ * @brief
+ * Poll CAN message from CAN driver and push to rx queue.
+ * @details
+ * This function may able to put in rx ISR, but need to aware locking or ISR disable.
+ */
+void CORxPoll(CO_NODE *node){
+    int16_t   result;
+    CO_IF_FRM frm;
+    while(true){
+        result = COIfCanRead(&node->If, &frm);
+        if(result < 0){
+            printf("[WARN] COIfCanRead with CO_ERR_IF_CAN_READ error and with internel Error code %d\n", result);
+            break;
+        }else if(result==0){
+            break;
+        }else{
+            // push frame to rx queue
+            size_t len = lwrb_write(&node->Rxed_q, &frm, sizeof(frm));
+            continue;
+        }
+    }
+}
+
 /*
 * see function definition
 */
@@ -126,14 +147,15 @@ void CONodeProcess(CO_NODE *node)
     int16_t   result;
     uint8_t   allowed;
 
-    result = COIfCanRead(&node->If, &frm);
-    if (result < 0) {
-        // pass
-        printf("[WARN] COIfCanRead with CO_ERR_IF_CAN_READ error and with internel Error code %d\n", result);
-    }
-    else if (result == 0){
-        //the most shown case
-        result = node->Internel_can->Read(node->Internel_can, &frm);
+    CORxPoll(node);
+
+    // read 1 frame from rx queue
+    uint8_t data[sizeof(CO_IF_FRM)];
+    //return number of bytes read
+    result = lwrb_read(&node->Rxed_q, data, sizeof(data));
+    if(result>0){
+        // printf("[debug] result: %d\n", result);
+        memcpy(&frm, data, sizeof(data));
     }
     
     if(result > 0){

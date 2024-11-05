@@ -68,6 +68,10 @@ extern "C" {
 #include "co_err.h"
 #include "co_obj.h"
 
+#ifdef __cplusplus
+#define LWRB_DISABLE_ATOMIC
+#endif
+#include <lwrb/lwrb.h> //link with cmake
 
 /******************************************************************************
 * PUBLIC TYPES
@@ -79,27 +83,30 @@ extern "C" {
 *    CANopen node.
 */
 typedef struct CO_NODE_T {
-    struct CO_DICT_T       Dict;                 /*!< Object dictionary      */
-    struct CO_IF_T         If;                   /*!< Can driver interface   */
-    struct CO_IF_CAN_DRV  *Internel_can;      /*!< Can Internal interface */
-    struct CO_EMCY_T       Emcy;                 /*!< Node error status      */
-    struct CO_NMT_T        Nmt;                  /*!< Network management     */
-    struct CO_TMR_T        Tmr;                  /*!< Timer manager          */
-    struct CO_SDO_T        Sdo[CO_SSDO_N];       /*!< SDO Server Array       */
-    uint8_t               *SdoBuf;               /*!< SDO Transfer Buffer    */
+    struct CO_DICT_T       Dict;                                        /*!< Object dictionary      */
+    struct CO_IF_T         If;                                          /*!< Can driver interface   */
+    // struct CO_IF_CAN_DRV  *Internel_can;                             /*!< Can Internal interface */
+    struct lwrb            Rxed_q;                                      /*!< received message queue */
+    uint8_t                Rxed_q_data[sizeof(CO_IF_FRM) * 128 + 1];   /*!< received message queue underline memory */
+
+    struct CO_EMCY_T       Emcy;                                        /*!< Node error status      */
+    struct CO_NMT_T        Nmt;                                         /*!< Network management     */
+    struct CO_TMR_T        Tmr;                                         /*!< Timer manager          */
+    struct CO_SDO_T        Sdo[CO_SSDO_N];                              /*!< SDO Server Array       */
+    uint8_t               *SdoBuf;                                      /*!< SDO Transfer Buffer    */
 #if USE_CSDO
-    struct CO_CSDO_T       CSdo[CO_CSDO_N];      /*!< SDO client array       */
+    struct CO_CSDO_T       CSdo[CO_CSDO_N];                             /*!< SDO client array       */
 #endif
-    struct CO_RPDO_T       RPdo[CO_RPDO_N];      /*!< RPDO Array             */
-    struct CO_TPDO_T       TPdo[CO_TPDO_N];      /*!< TPDO Array             */
-    struct CO_TPDO_LINK_T  TMap[CO_TPDO_N * 8];  /*!< TPDO mapping links     */
-    struct CO_SYNC_T       Sync;                 /*!< SYNC management        */
+    struct CO_RPDO_T       RPdo[CO_RPDO_N];                             /*!< RPDO Array             */
+    struct CO_TPDO_T       TPdo[CO_TPDO_N];                             /*!< TPDO Array             */
+    struct CO_TPDO_LINK_T  TMap[CO_TPDO_N * 8];                         /*!< TPDO mapping links     */
+    struct CO_SYNC_T       Sync;                                        /*!< SYNC management        */
 #if USE_LSS
-    struct CO_LSS_T        Lss;                  /*!< LSS slave handling     */
+    struct CO_LSS_T        Lss;                                         /*!< LSS slave handling     */
 #endif //USE_LSS
-    enum   CO_ERR_T        Error;                /*!< detected error code    */
-    uint32_t               Baudrate;             /*!< default CAN baudrate   */
-    uint8_t                NodeId;               /*!< default Node-ID        */
+    enum   CO_ERR_T        Error;                                       /*!< detected error code    */
+    uint32_t               Baudrate;                                    /*!< default CAN baudrate   */
+    uint8_t                NodeId;                                      /*!< default Node-ID        */
 
 } CO_NODE;
 

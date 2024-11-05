@@ -15,6 +15,19 @@
 #   limitations under the License.
 #******************************************************************************
 
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.38.3/CPM.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+  EXPECTED_HASH SHA256=cc155ce02e7945e7b8967ddfaff0b050e958a723ef7aad3766d368940cb15494
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+
+CPMAddPackage(
+  NAME lwrb
+  URL  https://github.com/MaJerle/lwrb/archive/refs/tags/v3.2.0.tar.gz
+)
+
 #---
 # define the canopen stack library
 #
@@ -32,7 +45,6 @@ target_include_directories(canopen-stack
     object/cia301
     service/cia301
     service/cia305
-    driver/loopback
     driver/socketcan
     driver/swcycle
 )
@@ -58,7 +70,6 @@ target_sources(canopen-stack
     hal/co_if_nvm.c
     hal/co_if_timer.c
     # driver
-    driver/loopback/drv_can_loop.c
     driver/socketcan/drv_can_socketcan.c
     driver/swcycle/drv_timer_swcycle.c
 
@@ -96,6 +107,8 @@ target_sources(canopen-stack
     service/cia305/co_lss.c
 )
 
+target_link_libraries(canopen-stack PUBLIC lwrb)
+target_compile_options(canopen-stack PRIVATE "-std=c2x")
 
 # cmake-format: on
 add_library(canopen-stack-master master/co_nmt_master.c master/co_master.cpp)

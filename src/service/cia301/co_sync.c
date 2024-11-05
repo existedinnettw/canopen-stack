@@ -167,5 +167,7 @@ void COSyncProdSend(void *parg) {
     CO_SET_DLC(&frm, 0);
 
     (void)COIfCanSend(&sync->Node->If, &frm);
-    (void)sync->Node->Internel_can->Send(sync->Node->Internel_can, &frm);
+    size_t len;
+    len = lwrb_write(&sync->Node->Rxed_q, &frm, sizeof(frm));
+    // printf("[debug] len: %d\n", len);
 }

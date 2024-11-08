@@ -187,10 +187,10 @@ static int16_t DrvCanSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
     }
     CO_LNX_SKTCAN *self = container_of(super, CO_LNX_SKTCAN, super);
 
-#ifndef NDEBUG
-    // Get high-resolution time
-    clock_gettime(CLOCK_MONOTONIC, &start);
-#endif
+// #ifndef NDEBUG
+//     // Get high-resolution time
+//     clock_gettime(CLOCK_MONOTONIC, &start);
+// #endif
     // Perform write operation
     ssize_t bytesWritten = write(self->CanSocket, &frame, sizeof(frame));
     if (bytesWritten < 0)
@@ -198,12 +198,12 @@ static int16_t DrvCanSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
         perror("DrvCanSend failed");
         return errno;
     }
-#ifndef NDEBUG
-    // Measure elapsed time
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
-#endif
+// #ifndef NDEBUG
+//     // Measure elapsed time
+//     clock_gettime(CLOCK_MONOTONIC, &end);
+//     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+//     printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
+// #endif
     return sizeof(CO_IF_FRM);
 }
 
@@ -226,10 +226,10 @@ static int16_t DrvCanNBSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
     }
 
     CO_LNX_SKTCAN *self = container_of(super, CO_LNX_SKTCAN, super);
-#ifndef NDEBUG
-    // Get high-resolution time
-    clock_gettime(CLOCK_MONOTONIC, &start);
-#endif
+// #ifndef NDEBUG
+//     // Get high-resolution time
+//     clock_gettime(CLOCK_MONOTONIC, &start);
+// #endif
     // Prepare to send the CAN frame
     ssize_t bytesSent = sendto(self->CanSocket, &frame, sizeof(frame), MSG_DONTWAIT, NULL, 0);
     if (bytesSent < 0)
@@ -243,12 +243,12 @@ static int16_t DrvCanNBSend(const CO_IF_CAN_DRV *super, CO_IF_FRM *frm)
         perror("sendto");
         return errno;
     }
-#ifndef NDEBUG
-    // Measure elapsed time
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
-#endif
+// #ifndef NDEBUG
+//     // Measure elapsed time
+//     clock_gettime(CLOCK_MONOTONIC, &end);
+//     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+//     printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
+// #endif
     return sizeof(CO_IF_FRM);
 }
 

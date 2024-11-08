@@ -51,7 +51,7 @@ using std::sig_atomic_t;
  ******************************************************************************/
 
 /* Allocate a global CANopen node object */
-static CO_NODE Clk;
+static CO_NODE master_node;
 static volatile sig_atomic_t keep_running = 1;
 
 /******************************************************************************
@@ -158,9 +158,16 @@ void *rt_cb(void *args)
             printf("rt thread exit\n");
             pthread_exit((void *)EXIT_FAILURE);
         }
-        COTmrService(&Node->Tmr);
-        COTmrProcess(&Clk.Tmr);
-        CONodeProcess(&Clk);
+        {
+            // following is 1ms callback
+            CONodeProcess(&master_node);
+            COTmrService(&Node->Tmr);
+            COTmrProcess(&master_node.Tmr);
+            CONodeProcess(&master_node);
+            // user app logic following
+
+            // sleep until next tick
+        }
         wakeup_time = timespec_add(wakeup_time, (struct timespec){.tv_sec = 0, .tv_nsec = tv_nsec});
     }
     printf("rt thread exit success\n");
@@ -243,8 +250,8 @@ int main(void)
     COLnxSktCanInit(&Linux_Socketcan_CanDriver, "can0");
     AppSpec.Drv->Can = &Linux_Socketcan_CanDriver.super;
 
-    CONodeInit(&Clk, &AppSpec);
-    CO_ERR err = CONodeGetErr(&Clk);
+    CONodeInit(&master_node, &AppSpec); //to INIT mode
+    CO_ERR err = CONodeGetErr(&master_node);
     if (err != CO_ERR_NONE)
     {
         printf("[DEBUG] co node init failed with code: %d\n", err);
@@ -255,13 +262,13 @@ int main(void)
      * call to the callback function 'AppClock()' with a period
      * of 1s (equal: 1000ms).
      */
-    ticks = COTmrGetTicks(&Clk.Tmr, 1000, CO_TMR_UNIT_1MS);
-    COTmrCreate(&Clk.Tmr, 0, ticks, AppClock, &Clk);
+    ticks = COTmrGetTicks(&master_node.Tmr, 1000, CO_TMR_UNIT_1MS);
+    COTmrCreate(&master_node.Tmr, 0, ticks, AppClock, &master_node);
 
     /* Start the CANopen node and set it automatically to
      * NMT mode: 'OPERATIONAL'.
      */
-    CONodeStart(&Clk);
+    CONodeStart(&master_node);  //to PREOP mode
 
     pthread_t thread;
     pthread_attr_t attr;
@@ -271,18 +278,19 @@ int main(void)
     pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
     pthread_attr_setschedparam(&attr, &sched);
-    int ret = pthread_create(&thread, &attr, rt_cb, (void *)&Clk);
+    int ret = pthread_create(&thread, &attr, rt_cb, (void *)&master_node);
     if (ret != 0)
     {
+        printf("[ERROR] pthread_create error, you may need to offer sudo privilege.\n");
         handle_error_en(ret, "pthread_create");
     }
 
     // config other nodes
     printf("[DEBUG] set PREOP\n");
-    CO_NMT_sendCommand(&Clk, CO_NMT_ENTER_PRE_OPERATIONAL, 0x02);
+    CO_NMT_sendCommand(&master_node, CO_NMT_ENTER_PRE_OPERATIONAL, 0x02);
 
     CO_CSDO *csdo;
-    csdo = COCSdoFind(&Clk, 0x0);
+    csdo = COCSdoFind(&master_node, 0x0);
     if (csdo == 0)
     {
         printf("SDO client #0 is missing or busy\n");
@@ -568,10 +576,13 @@ int main(void)
 
     // ==================================================local pdo map set============================================================
 
-    // NMT OP
-    CO_NMT_sendCommand(&Clk, CO_NMT_ENTER_OPERATIONAL, 0x02);
+    // ticks = COTmrGetTicks(&master_node.Tmr, 100, CO_TMR_UNIT_1MS);
+    // COTmrCreate(&master_node.Tmr, 0, ticks, xxx_cb, &master_node);
 
-    CONmtSetMode(&Clk.Nmt, CO_OPERATIONAL);
+    // NMT OP
+    CO_NMT_sendCommand(&master_node, CO_NMT_ENTER_OPERATIONAL, 0x02);
+
+    CONmtSetMode(&master_node.Nmt, CO_OPERATIONAL);
 
     void *status;
     pthread_join(thread, &status);

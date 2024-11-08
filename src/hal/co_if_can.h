@@ -182,6 +182,10 @@ extern "C" {
 struct CO_IF_T;                /* Declaration of interface structure         */
 struct CO_NODE_T;              /* Declaration of canopen node structure      */
 
+/**
+ * @details
+ * RTR is not supported, see issue #42 RTR Frames.
+ */
 typedef struct CO_IF_FRM_T {         /*!< Type, which represents a CAN frame */
     uint32_t  Identifier;            /*!< CAN message identifier             */
     uint8_t   Data[8];               /*!< CAN message Data (payload)         */

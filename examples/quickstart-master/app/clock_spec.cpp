@@ -74,7 +74,7 @@ const uint32_t Obj1400_01_20 = 0x00000182;
 const uint32_t Obj1600_01_20 = CO_LINK(0x2200, 0x00, 16); // 604100
 // const uint32_t Obj1600_02_20 = CO_LINK(0x2300, 0x00, 16); //604200
 
-const uint32_t Obj1800_01_20 = CO_COBID_TPDO_DEFAULT(0); // para: tpdo num
+const uint32_t Obj1800_01_20 = CO_COBID_TPDO_DEFAULT(0) + APP_NODE_ID; // para: tpdo num
 // const uint32_t Obj1800_01_20 = 0x40000202;
 const uint32_t Obj1A00_01_20 = CO_LINK(0x2100, 0x01, 32); // hr
 const uint32_t Obj1A00_02_20 = CO_LINK(0x2100, 0x02, 8);  // min
@@ -157,7 +157,7 @@ static uint8_t SdoSrvMem[CO_SSDO_N * CO_SDO_BUF_BYTE];
  * your specific hardware functionality.
  */
 static struct CO_IF_DRV_T AppDriver = {
-    nullptr,    // init later
+    nullptr, // init later
     &SwCycleTimerDriver,
     &SimNvmDriver};
 

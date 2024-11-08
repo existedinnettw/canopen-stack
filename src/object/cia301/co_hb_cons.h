@@ -72,6 +72,9 @@ extern const CO_OBJ_TYPE COTNmtHbCons;
 * PROTECTED API FUNCTION
 ******************************************************************************/
 
+/**
+ * @return -1 if error, return node id (>0) if success
+ */
 int16_t CONmtHbConsCheck(CO_NMT *nmt, CO_IF_FRM *frm);
 
 /******************************************************************************

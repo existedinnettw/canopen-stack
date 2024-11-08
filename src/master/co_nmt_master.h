@@ -7,56 +7,72 @@ extern "C"
 {
 #endif
 
-    /******************************************************************************
-     * INCLUDES
-     ******************************************************************************/
+  /******************************************************************************
+   * INCLUDES
+   ******************************************************************************/
 
-#include "co_obj.h"
-#include "co_if.h"
 #include "co_err.h"
+#include "co_if.h"
+#include "co_nmt.h"
+#include "co_obj.h"
 
-    /******************************************************************************
-     * PuBLIC INCLUDES
-     ******************************************************************************/
+  /******************************************************************************
+   * PUBLIC INCLUDES
+   ******************************************************************************/
 
-    /******************************************************************************
-     * PUBLIC TYPES
-     ******************************************************************************/
+  /******************************************************************************
+   * PUBLIC TYPES
+   ******************************************************************************/
 
-    struct CO_NODE_T; /* Declaration of canopen node structure       */
+  struct CO_NODE_T; /* Declaration of canopen node structure       */
 
-    // typedef struct CO_NMT_MASTER_T;
+  // typedef struct CO_NMT_MASTER_T;
 
-    typedef enum
-    {
-        CO_NMT_NO_COMMAND = 0,              /**< 0, No command */
-        CO_NMT_ENTER_OPERATIONAL = 1,       /**< 1, Start device */
-        CO_NMT_ENTER_STOPPED = 2,           /**< 2, Stop device */
-        CO_NMT_ENTER_PRE_OPERATIONAL = 128, /**< 128, Put device into pre-operational */
-        CO_NMT_RESET_NODE = 129,            /**< 129, Reset device */
-        CO_NMT_RESET_COMMUNICATION = 130    /**< 130, Reset CANopen communication on device */
-    } CO_NMT_command_t;
+  /**
+   * @ref CONmtModeCode
+   * @see canopennode CO_NMT_command_t
+   */
+  typedef enum
+  {
+    CO_NMT_NO_COMMAND = 0,              /**< 0, No command */
+    CO_NMT_ENTER_OPERATIONAL = 1,       /**< 1, Start device */
+    CO_NMT_ENTER_STOPPED = 2,           /**< 2, Stop device */
+    CO_NMT_ENTER_PRE_OPERATIONAL = 128, /**< 128, Put device into pre-operational */
+    CO_NMT_RESET_NODE = 129,            /**< 129, Reset device */
+    CO_NMT_RESET_COMMUNICATION = 130    /**< 130, Reset CANopen communication on device */
+  } CO_NMT_command_t;
 
-    /******************************************************************************
-     * PUBLIC FUNCTIONS
-     ******************************************************************************/
+  /******************************************************************************
+   * PUBLIC FUNCTIONS
+   ******************************************************************************/
 
-    /**
-     * @param nodeID [0x0,0x80], 0x0 imply all node, others specifiy node id.
-     */
-    CO_ERR
-    CO_NMT_sendCommand(struct CO_NODE_T *node, CO_NMT_command_t command, uint8_t nodeID);
+  /**
+   * @brief
+   * convert NMT command (event) to specifiy NMT mode
+   * @details
+   * assume transition success
+   */
+  CO_MODE CO_NMT_command_t_to_CO_MODE(CO_NMT_command_t command);
 
-    /******************************************************************************
-     * PRIVATE FUNCTIONS
-     ******************************************************************************/
+  /**
+   * @brief send NMT command to other node
+   * @param node pointer to self node structure
+   * @param command NMT command, event of state transition request.
+   * @param nodeID target node id. range between [0x0,127]. 0x0 imply all node, others specifiy node id.
+   */
+  CO_ERR
+  CO_NMT_sendCommand(struct CO_NODE_T* node, CO_NMT_command_t command, uint8_t nodeID);
 
-    /******************************************************************************
-     * CALLBACK FUNCTIONS
-     ******************************************************************************/
+  /******************************************************************************
+   * PRIVATE FUNCTIONS
+   ******************************************************************************/
+
+  /******************************************************************************
+   * CALLBACK FUNCTIONS
+   ******************************************************************************/
 
 #ifdef __cplusplus /* for compatibility with C++ environments  */
 }
 #endif
 
-#endif /* #ifndef CO_NMT_MASTER_H_ */
+#endif /* ifndef CO_NMT_MASTER_H_ */

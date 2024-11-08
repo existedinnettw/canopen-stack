@@ -150,15 +150,8 @@ void CONodeProcess(CO_NODE *node)
     CORxPoll(node);
 
     // read 1 frame from rx queue
-    uint8_t data[sizeof(CO_IF_FRM)];
-    //return number of bytes read
-    result = lwrb_read(&node->Rxed_q, data, sizeof(data));
-    if(result>0){
-        // printf("[debug] result: %d\n", result);
-        memcpy(&frm, data, sizeof(data));
-    }
-    
-    if(result > 0){
+    while( (result = lwrb_read(&node->Rxed_q, &frm, sizeof(frm))) > 0 ){
+        
         // print_frame(frm);
         allowed = node->Nmt.Allowed;
 #if USE_LSS
@@ -170,60 +163,58 @@ void CONodeProcess(CO_NODE *node)
             allowed = 0;
         }
 #endif //USE_LSS
-    }else{
-        allowed = 0;
-    }
 
-    if ((allowed & CO_SDO_ALLOWED) != (uint8_t)0) {
-        srv = COSdoCheck(node->Sdo, &frm);
-        if (srv != NULL) {
-            err = COSdoResponse(srv);
-            if ((err == CO_ERR_NONE     ) ||
-                (err == CO_ERR_SDO_ABORT)) {
-                (void)COIfCanSend(&node->If, &frm);
-            }
-            allowed = 0;
-#if USE_CSDO
-        } else {
-            csdo = COCSdoCheck(node->CSdo, &frm);
-            if (csdo != NULL) {
-                err = COCSdoResponse(csdo);
-                if ((err == CO_ERR_NONE) ||
+        if ((allowed & CO_SDO_ALLOWED) != (uint8_t)0) {
+            srv = COSdoCheck(node->Sdo, &frm);
+            if (srv != NULL) {
+                err = COSdoResponse(srv);
+                if ((err == CO_ERR_NONE     ) ||
                     (err == CO_ERR_SDO_ABORT)) {
                     (void)COIfCanSend(&node->If, &frm);
                 }
                 allowed = 0;
-            }
+#if USE_CSDO
+            } else {
+                csdo = COCSdoCheck(node->CSdo, &frm);
+                if (csdo != NULL) {
+                    err = COCSdoResponse(csdo);
+                    if ((err == CO_ERR_NONE) ||
+                        (err == CO_ERR_SDO_ABORT)) {
+                        (void)COIfCanSend(&node->If, &frm);
+                    }
+                    allowed = 0;
+                }
 #endif
+            }
         }
-    }
 
-    if ((allowed & CO_NMT_ALLOWED) != (uint8_t)0) {
-        if (CONmtCheck(&node->Nmt, &frm) >= 0) {
-            allowed = 0;
+        if ((allowed & CO_NMT_ALLOWED) != (uint8_t)0) {
+            if (CONmtCheck(&node->Nmt, &frm) >= 0) {
+                allowed = 0;
+            }
+            if (CONmtHbConsCheck(&node->Nmt, &frm) >= 0) {
+                allowed = 0;
+            }
         }
-        if (CONmtHbConsCheck(&node->Nmt, &frm) >= 0) {
-            allowed = 0;
-        }
-    }
 
-    if ((allowed & CO_PDO_ALLOWED) != (uint8_t)0) {
-        rpdo = CORPdoCheck(node->RPdo, &frm);
-        if (rpdo != NULL) {
-            CORPdoRx(rpdo, &frm);
-            allowed = 0;
+        if ((allowed & CO_PDO_ALLOWED) != (uint8_t)0) {
+            rpdo = CORPdoCheck(node->RPdo, &frm);
+            if (rpdo != NULL) {
+                CORPdoRx(rpdo, &frm);
+                allowed = 0;
+            }
         }
-    }
 
-    if ((allowed & CO_SYNC_ALLOWED) != (uint8_t)0) {
-        result = COSyncUpdate(&node->Sync, &frm);
-        if (result >= 0) {
-            COSyncHandler(&node->Sync);
-            allowed = 0;
+        if ((allowed & CO_SYNC_ALLOWED) != (uint8_t)0) {
+            result = COSyncUpdate(&node->Sync, &frm);
+            if (result >= 0) {
+                COSyncHandler(&node->Sync);
+                allowed = 0;
+            }
         }
-    }
 
-    if (allowed != (uint8_t)0) {
-        COIfCanReceive(&frm);
+        if (allowed != (uint8_t)0) {
+            COIfCanReceive(&frm);
+        }
     }
 }

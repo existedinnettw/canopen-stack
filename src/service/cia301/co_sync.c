@@ -124,6 +124,10 @@ void COSyncRestart(CO_SYNC *sync)
     }
 }
 
+/**
+ * @todo may split into 2 part `CONodeProcessSyncRpdo` and `CONodeProcessSyncTpdo`
+ * which let user app logic insert in between to minimize time delay.
+ */
 void COSyncHandler (CO_SYNC *sync)
 {
     uint8_t i;

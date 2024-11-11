@@ -51,20 +51,21 @@ static volatile sig_atomic_t keep_running = 1;
 /* timer callback function */
 static void AppClock(void *p_arg)
 {
-    CO_NODE  *node;
-    CO_OBJ   *od_sec;
-    CO_OBJ   *od_min;
-    CO_OBJ   *od_hr;
-    uint8_t   second;
-    uint8_t   minute;
-    uint32_t  hour;
+    CO_NODE *node;
+    CO_OBJ *od_sec;
+    CO_OBJ *od_min;
+    CO_OBJ *od_hr;
+    uint8_t second;
+    uint8_t minute;
+    uint32_t hour;
 
     /* For flexible usage (not needed, but nice to show), we use the argument
      * as reference to the CANopen node object. If no node is given, we ignore
      * the function call by returning immediatelly.
      */
     node = (CO_NODE *)p_arg;
-    if (node == 0) {
+    if (node == 0)
+    {
         return;
     }
 
@@ -72,27 +73,30 @@ static void AppClock(void *p_arg)
      * clock values out of the object dictionary, increment the seconds and
      * update all clock values in the object dictionary.
      */
-    if (CONmtGetMode(&node->Nmt) == CO_OPERATIONAL) {
+    if (CONmtGetMode(&node->Nmt) == CO_OPERATIONAL)
+    {
 
         od_sec = CODictFind(&node->Dict, CO_DEV(0x2100, 3));
         od_min = CODictFind(&node->Dict, CO_DEV(0x2100, 2));
-        od_hr  = CODictFind(&node->Dict, CO_DEV(0x2100, 1));
+        od_hr = CODictFind(&node->Dict, CO_DEV(0x2100, 1));
 
         COObjRdValue(od_sec, node, (void *)&second, sizeof(second));
         COObjRdValue(od_min, node, (void *)&minute, sizeof(minute));
-        COObjRdValue(od_hr , node, (void *)&hour  , sizeof(hour)  );
+        COObjRdValue(od_hr, node, (void *)&hour, sizeof(hour));
 
         second++;
-        if (second >= 60) {
+        if (second >= 60)
+        {
             second = 0;
             minute++;
         }
-        if (minute >= 60) {
+        if (minute >= 60)
+        {
             minute = 0;
             hour++;
         }
 
-        COObjWrValue(od_hr , node, (void *)&hour  , sizeof(hour)  );
+        COObjWrValue(od_hr, node, (void *)&hour, sizeof(hour));
         COObjWrValue(od_min, node, (void *)&minute, sizeof(minute));
         COObjWrValue(od_sec, node, (void *)&second, sizeof(second));
     }
@@ -110,10 +114,13 @@ timespec_add(struct timespec time1, struct timespec time2)
 {
     struct timespec result;
     const uint32_t NSEC_PER_SEC = 1e9;
-  if ((time1.tv_nsec + time2.tv_nsec) >= NSEC_PER_SEC) {
+    if ((time1.tv_nsec + time2.tv_nsec) >= NSEC_PER_SEC)
+    {
         result.tv_sec = time1.tv_sec + time2.tv_sec + 1;
         result.tv_nsec = time1.tv_nsec + time2.tv_nsec - NSEC_PER_SEC;
-  } else {
+    }
+    else
+    {
         result.tv_sec = time1.tv_sec + time2.tv_sec;
         result.tv_nsec = time1.tv_nsec + time2.tv_nsec;
     }
@@ -158,7 +165,7 @@ void handle_error_en(int err, const char *msg)
     exit(EXIT_FAILURE);
 }
 
-void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code)
+void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code, void *args)
 {
     printf("sdo send or received\n");
 }
@@ -211,7 +218,8 @@ int main(void)
     sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
     pthread_attr_setschedparam(&attr, &sched);
     int ret = pthread_create(&thread, &attr, rt_cb, (void *)&Clk);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         handle_error_en(ret, "pthread_create");
     }
 
@@ -237,6 +245,7 @@ int main(void)
                                 CO_DEV(0x1017, 0),
                                 (uint8_t *)&val, sizeof(val),
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     if (err != CO_ERR_NONE)
     {

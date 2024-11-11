@@ -24,6 +24,7 @@
 #include "co_core.h"
 // #include "object/cia301.h"
 #include "co_nmt_master.h"
+#include "co_master.hpp"
 
 #include "drv_can_socketcan.h"
 
@@ -181,7 +182,7 @@ void handle_error_en(int err, const char *msg)
     exit(EXIT_FAILURE);
 }
 
-void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code)
+void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code, void *args)
 {
     // checkout Table 22: SDO abort codes, CO_SDO_ERR_OBJ
     // The stack not yet implement response handle yet
@@ -250,7 +251,7 @@ int main(void)
     COLnxSktCanInit(&Linux_Socketcan_CanDriver, "can0");
     AppSpec.Drv->Can = &Linux_Socketcan_CanDriver.super;
 
-    CONodeInit(&master_node, &AppSpec); //to INIT mode
+    CONodeInit(&master_node, &AppSpec); // to INIT mode
     CO_ERR err = CONodeGetErr(&master_node);
     if (err != CO_ERR_NONE)
     {
@@ -265,29 +266,13 @@ int main(void)
     ticks = COTmrGetTicks(&master_node.Tmr, 1000, CO_TMR_UNIT_1MS);
     COTmrCreate(&master_node.Tmr, 0, ticks, AppClock, &master_node);
 
-    /* Start the CANopen node and set it automatically to
-     * NMT mode: 'OPERATIONAL'.
-     */
-    CONodeStart(&master_node);  //to PREOP mode
+    auto master = Master_node(master_node);
+    master.start_config();
 
-    pthread_t thread;
-    pthread_attr_t attr;
-    struct sched_param sched;
-    pthread_attr_init(&attr);
-    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-    sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
-    pthread_attr_setschedparam(&attr, &sched);
-    int ret = pthread_create(&thread, &attr, rt_cb, (void *)&master_node);
-    if (ret != 0)
-    {
-        printf("[ERROR] pthread_create error, you may need to offer sudo privilege.\n");
-        handle_error_en(ret, "pthread_create");
-    }
+    auto slave_mot = Slave_node_model(0x02, master_node, RXPDO_TIMEOUT);
 
-    // config other nodes
-    printf("[DEBUG] set PREOP\n");
-    CO_NMT_sendCommand(&master_node, CO_NMT_ENTER_PRE_OPERATIONAL, 0x02);
+    master.slave_node_models.push_back(slave_mot); // todo: may need mapping
+    master.start_config_slaves();
 
     CO_CSDO *csdo;
     csdo = COCSdoFind(&master_node, 0x0);
@@ -303,275 +288,53 @@ int main(void)
 
     uint32_t timeout = 500;
     err = CO_ERR_NONE;
-
-    // read sync message by 0x1005
-    uint32_t other_node_0x1005_val = CO_SYNC_COBID_ON | 0x80;
-    // while ((err = COCSdoRequestUpload(csdo,
-    //                                   CO_DEV(0x1005, 0),
-    //                                   (uint8_t *)&other_node_0x1005_val, sizeof(other_node_0x1005_val),
-    //                                   TS_AppCSdoCallback,
-    //                                   timeout)) != CO_ERR_NONE)
-    // {
-    // }
+    uint32_t abort_code;
 
     // set 0x1005, request send sync message
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1005, 0x00),
-                                        (uint8_t *)&other_node_0x1005_val, sizeof(other_node_0x1005_val),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        // error handle
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    };
-    printf("[INFO] sdo send 0x1005 success\n");
+    uint32_t other_node_0x1005_val = CO_SYNC_COBID_ON | 0x80;
+    abort_code = slave_mot.b_send_sdo_request(0x100500, 0, &other_node_0x1005_val, sizeof(other_node_0x1005_val));
 
-    // set node heart beat 0x1017 by sdo
+    // set node heart beat 0x1017 by sdo, write Producer heartbeat time
     uint16_t val = 1000; // 1sec
-
-    // write Producer heartbeat time
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1017, 0x00),
-                                        (uint8_t *)&val, sizeof(val),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        // error handle
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    };
-    printf("[INFO] sdo send 0x1017 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x101700, 0, &val, sizeof(val));
     // how to get response?
 
     // config pdo by sdo
 
     // --- config pdo mapping
     uint8_t txpdo_trans_type = 0x01;
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1800, 0x02),
-                                        (uint8_t *)&txpdo_trans_type, sizeof(txpdo_trans_type),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x180002 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x180002, 0, &txpdo_trans_type, sizeof(txpdo_trans_type));
 
     // close pdo mapping before setting
     uint8_t num_mapped_TPDO = 0;
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1A00, 0x00),
-                                        (uint8_t *)&num_mapped_TPDO, sizeof(num_mapped_TPDO),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x1A0000 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x1A0000, 0, &num_mapped_TPDO, sizeof(num_mapped_TPDO));
 
     uint32_t app_obj_map = CO_LINK(0x6041, 0x00, 16);
     // app_obj_map = CO_LINK(0x606C, 0x00, 32);
     // app_obj_map = CO_LINK(0x60FD, 0x00, 32);
     // app_obj_map = CO_LINK(0x6064, 0x00, 32);
-    printf("[DEBUG] prepare for 0x1A0001 map: 0x%08x\n", app_obj_map);
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1A00, 0x01),
-                                        (uint8_t *)&app_obj_map, sizeof(app_obj_map),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x1A0001 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x1A0001, 0, &app_obj_map, sizeof(app_obj_map));
 
     // restart to pdo mapping
     num_mapped_TPDO = 1; // 1 mapped TPDO
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1A00, 0x00),
-                                        (uint8_t *)&num_mapped_TPDO, sizeof(num_mapped_TPDO),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x1A0000 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x1A0000, 0, &num_mapped_TPDO, sizeof(num_mapped_TPDO));
 
     //
     uint8_t rxpdo_trans_type = 0x00; // FE
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1400, 0x02),
-                                        (uint8_t *)&rxpdo_trans_type, sizeof(rxpdo_trans_type),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x140002 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x140002, 0, &rxpdo_trans_type, sizeof(rxpdo_trans_type));
     // close pdo mapping before setting
     uint8_t num_mapped_RPDO = 0;
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1600, 0x00),
-                                        (uint8_t *)&num_mapped_RPDO, sizeof(num_mapped_RPDO),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x160000 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x160000, 0, &num_mapped_RPDO, sizeof(num_mapped_RPDO));
 
     app_obj_map = CO_LINK(0x6040, 0x00, 16);
     // app_obj_map = CO_LINK(0x6042, 0x00, 16);
     // app_obj_map = CO_LINK(0x607A, 0x00, 32);
     // app_obj_map = CO_LINK(0x6081, 0x00, 32);
-    printf("[DEBUG] prepare for 0x160001 map: 0x%08x\n", app_obj_map);
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1600, 0x01),
-                                        (uint8_t *)&app_obj_map, sizeof(app_obj_map),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x160001 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x160001, 0, &app_obj_map, sizeof(app_obj_map));
 
     // restart to pdo mapping
     num_mapped_RPDO = 1; // 1 mapped TPDO
-    while ((err = COCSdoRequestDownload(csdo,
-                                        CO_DEV(0x1600, 0x00),
-                                        (uint8_t *)&num_mapped_RPDO, sizeof(num_mapped_RPDO),
-                                        TS_AppCSdoCallback,
-                                        timeout)) != CO_ERR_NONE)
-    {
-        /* code */
-        switch (err)
-        {
-        case CO_ERR_SDO_BUSY:
-            printf("[INFO] busy\n");
-            break;
-        default:
-            printf("[ERROR] sdo client download error: %d\n", (int)err);
-            exit(EXIT_FAILURE);
-        }
-        struct timespec ts1 = {
-            .tv_sec = 0,
-            .tv_nsec = static_cast<__syscall_slong_t>(100e6)};
-        nanosleep(&ts1, NULL);
-    }
-    printf("[INFO] sdo send 0x160000 success\n");
+    abort_code = slave_mot.b_send_sdo_request(0x160000, 0, &num_mapped_RPDO, sizeof(num_mapped_RPDO));
     //
 
     // ==================================================local pdo map set============================================================
@@ -580,9 +343,24 @@ int main(void)
     // COTmrCreate(&master_node.Tmr, 0, ticks, xxx_cb, &master_node);
 
     // NMT OP
-    CO_NMT_sendCommand(&master_node, CO_NMT_ENTER_OPERATIONAL, 0x02);
+    // CO_NMT_sendCommand(&master_node, CO_NMT_ENTER_OPERATIONAL, 0x02);
+    // CONmtSetMode(&master_node.Nmt, CO_OPERATIONAL);
+    master.activate();
 
-    CONmtSetMode(&master_node.Nmt, CO_OPERATIONAL);
+    pthread_t thread;
+    pthread_attr_t attr;
+    struct sched_param sched;
+    pthread_attr_init(&attr);
+    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    pthread_attr_setschedparam(&attr, &sched);
+    int ret = pthread_create(&thread, &attr, rt_cb, (void *)&master_node);
+    if (ret != 0)
+    {
+        printf("[ERROR] pthread_create error, you may need to offer sudo privilege.\n");
+        handle_error_en(ret, "pthread_create");
+    }
 
     void *status;
     pthread_join(thread, &status);

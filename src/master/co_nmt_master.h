@@ -54,6 +54,8 @@ extern "C"
    */
   CO_MODE CO_NMT_command_t_to_CO_MODE(CO_NMT_command_t command);
 
+#define NMT_ALL_SLAVE 0x00
+
   /**
    * @brief send NMT command to other node
    * @param node pointer to self node structure
@@ -75,4 +77,4 @@ extern "C"
 }
 #endif
 
-#endif /* ifndef CO_NMT_MASTER_H_ */
+#endif // CO_NMT_MASTER_H_

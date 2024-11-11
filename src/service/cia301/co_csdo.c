@@ -149,6 +149,7 @@ static void COCSdoTransferFinalize(CO_CSDO *csdo)
     uint16_t           idx;
     uint8_t            sub;
     uint32_t           code;
+    void              *parg;
 
     if (csdo->State == CO_CSDO_STATE_BUSY) {
         /* Fetch transfer information */
@@ -156,9 +157,10 @@ static void COCSdoTransferFinalize(CO_CSDO *csdo)
         sub  = csdo->Tfer.Sub;
         code = csdo->Tfer.Abort;
         call = csdo->Tfer.Call;
+        parg = csdo->Tfer.parg;
 
         if (call != NULL) {
-            call(csdo, idx, sub, code);
+            call(csdo, idx, sub, code, parg);
         }
 
         /* Reset finished transfer information */
@@ -561,6 +563,7 @@ CO_ERR COCSdoRequestUpload(CO_CSDO *csdo,
                            uint8_t *buf,
                            uint32_t size,
                            CO_CSDO_CALLBACK_T callback,
+                           void    *parg,
                            uint32_t timeout)
 {
     CO_IF_FRM frm;
@@ -603,6 +606,7 @@ CO_ERR COCSdoRequestUpload(CO_CSDO *csdo,
     csdo->Tfer.Size    = size;
     csdo->Tfer.Tmt     = timeout;
     csdo->Tfer.Call    = callback;
+    csdo->Tfer.parg    = parg;
     csdo->Tfer.Buf_Idx = 0;
     csdo->Tfer.TBit    = 0;
 
@@ -627,6 +631,7 @@ CO_ERR COCSdoRequestDownload(CO_CSDO *csdo,
                              uint8_t *buffer,
                              uint32_t size,
                              CO_CSDO_CALLBACK_T callback,
+                             void *parg,
                              uint32_t timeout)
 {
     CO_IF_FRM frm;
@@ -665,6 +670,7 @@ CO_ERR COCSdoRequestDownload(CO_CSDO *csdo,
     csdo->Tfer.Size    = size;
     csdo->Tfer.Tmt     = timeout;
     csdo->Tfer.Call    = callback;
+    csdo->Tfer.parg    = parg;
     csdo->Tfer.Buf_Idx = 0;
     csdo->Tfer.TBit    = 0;
 

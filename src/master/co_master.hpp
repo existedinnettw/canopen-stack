@@ -51,16 +51,29 @@ public:
   /**
    * @details
    * blocking mode?
+   * @param trans_type 0 imply download, 1 imply upload
+   * @return abort code, 0 imply success, else imply error
    */
-  void b_send_sdo_request();
+  uint32_t b_send_sdo_request(uint32_t idx, bool trans_type, void* val_buf, size_t size);
 
-  void nb_send_sdo_request();
+  /**
+   * @param trans_type 0 imply download, 1 imply upload
+   * @param[in, out] val_buf as input if trans type is download. as output if trans type is upload
+   */
+  CO_ERR nb_send_sdo_request(uint32_t idx, bool trans_type, void* val_buf, size_t size);
+
+  /**
+   * @private
+   */
+  uint32_t _last_csdo_abort_code;
 
 private:
   // remote slave OD store in underline memory
-  uint8_t node_id = 127;      // node id shoul in [1, 127]
-  CO_MODE nmt_mode = CO_INIT; // expected remote node state
+  uint8_t node_id = 127; // node id shoul in [1, 127]
+
   Nmt_monitor_method monitor_method = HEARTBEAT;
+  CO_MODE _RXPDO_TIMEOUT_fake_nmt_mode = CO_INIT;
+
   //   CO_IF_CAN_DRV can_driver;                 // or use mater node?
   CO_NODE& master_node;
   std::map<uint32_t, uint32_t>
@@ -82,11 +95,21 @@ public:
     : master_node(master_node) {
       // od construct
     };
+  Master_node(const Master_node&)
+    : master_node(master_node) {};
   ~Master_node() {};
 
+  /**
+   * @brief
+   * swtich master to PREOP
+   */
   void start_config();
 
-  void wait_all_preop();
+  /**
+   * @brief
+   * let slave reach PREOP state.
+   */
+  void start_config_slaves();
 
   /**
    *
@@ -107,12 +130,15 @@ public:
    */
   void process();
 
+  // add node model through push_back directly
+  std::vector<Slave_node_model> slave_node_models;
+
 private:
-  std::vector<Slave_node_model> slave_node_model_list;
   Co_master_state logic_state = CO_MASTER_IDLE;
   CO_NODE& master_node;
 
   std::thread config_commu_thread;
 
   void self_master_pdo_mapping();
+  void set_slaves_NMT_mode(CO_NMT_command_t cmd);
 };

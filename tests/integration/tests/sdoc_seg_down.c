@@ -67,6 +67,7 @@ TS_DEF_MAIN(TS_CSdoWr_Seg16ByteDomain)
                                 CO_DEV(idx, sub),
                                 &val[0], 16,
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -160,6 +161,7 @@ TS_DEF_MAIN(TS_CSdoWr_SegTimeout)
                                 CO_DEV(idx, sub),
                                 &val[0], 16,
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -215,6 +217,7 @@ TS_DEF_MAIN(TS_CSdoWr_SegAbout)
                                 CO_DEV(idx, sub),
                                 &val[0], 16,
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -265,6 +268,7 @@ TS_DEF_MAIN(TS_CSdoWr_SegBadToggle)
                                 CO_DEV(idx, sub),
                                 &val[0], 16,
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -371,6 +375,7 @@ TS_DEF_MAIN(TS_CSdoWr_Seg257ByteDomain)
                                 CO_DEV(idx, sub),
                                 &val[0], size,
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 

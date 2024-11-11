@@ -84,7 +84,8 @@ struct CO_CSDO_T;
 typedef void (*CO_CSDO_CALLBACK_T)(struct CO_CSDO_T *csdo,
                                    uint16_t          index,
                                    uint8_t           sub,
-                                   uint32_t          code);
+                                   uint32_t          code, 
+                                   void *args);
 
 
 /*! \brief SDO SEGMENTED TRANSFER
@@ -118,6 +119,7 @@ typedef struct CO_CSDO_TRANSFER_T {
     uint32_t               Size;        /*!< Transfered data size            */
     int16_t                Tmr;         /*!< Identifier of timeout timer     */
     CO_CSDO_CALLBACK_T     Call;        /*!< Notification callback           */
+    void                  *parg;        /*!< Notification callback arguments */
     uint32_t               Buf_Idx;     /*!< Buffer Index                    */
     uint8_t                TBit;        /*!< Segment toggle bit              */
 } CO_CSDO_TRANSFER;
@@ -190,6 +192,7 @@ CO_ERR COCSdoRequestUpload(CO_CSDO *csdo,
                            uint8_t *buf,
                            uint32_t size,
                            CO_CSDO_CALLBACK_T callback,
+                           void    *parg,
                            uint32_t timeout);
 
 /*! \brief
@@ -224,6 +227,7 @@ CO_ERR COCSdoRequestDownload(CO_CSDO *csdo,
                              uint8_t *buf,
                              uint32_t size,
                              CO_CSDO_CALLBACK_T callback,
+                             void    *parg,
                              uint32_t timeout);
 
 /******************************************************************************

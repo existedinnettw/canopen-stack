@@ -67,6 +67,7 @@ TS_DEF_MAIN(TS_CSdoWr_1Byte)
                                 CO_DEV(idx, sub),
                                 &val, sizeof(val),
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -117,6 +118,7 @@ TS_DEF_MAIN(TS_CSdoWr_1Word)
                                 CO_DEV(idx, sub),
                                 (uint8_t *)&val, sizeof(val),
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -167,6 +169,7 @@ TS_DEF_MAIN(TS_CSdoWr_1Long)
                                 CO_DEV(idx, sub),
                                 (uint8_t *)&val, sizeof(val),
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -218,6 +221,7 @@ TS_DEF_MAIN(TS_CSdoWr_Timeout)
                                 CO_DEV(idx, sub),
                                 &val, sizeof(val),
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 
@@ -273,6 +277,7 @@ TS_DEF_MAIN(TS_CSdoWr_About)
                                 CO_DEV(idx, sub),
                                 &val, sizeof(val),
                                 TS_AppCSdoCallback,
+                                NULL,
                                 timeout);
     TS_ASSERT(err == CO_ERR_NONE);
 

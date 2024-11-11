@@ -139,7 +139,7 @@ void COTmrLock  (void);
 void COTmrUnlock(void);
 
 /* Application callbacks provided via function argument: */
-void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code);
+void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code, void *parg);
 
 #ifdef __cplusplus               /* for compatibility with C++ environments  */
 }

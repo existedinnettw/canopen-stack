@@ -50,7 +50,7 @@ public:
    * @brief
    * config pdo mapping of slave through SDO client
    */
-  void config_pdo_mapping(Slave_model_config config);
+  void config_pdo_mapping(const Slave_model_config& config);
 
   /**
    * @details
@@ -104,6 +104,10 @@ public:
     : Master_node(other.master_node) {};
   ~Master_node() {};
 
+  /**
+   * @attention
+   * input slave_model should on stack memory or container to handle its own memory lifecycle.
+   */
   void bind_slave(Slave_node_model& slave_model);
 
   /**
@@ -122,7 +126,7 @@ public:
    * @brief
    * config all pdo mapping of slaves through SDO client
    */
-  void config_pdo_mappings(Slave_model_configs configs);
+  void config_pdo_mappings(Slave_model_configs& configs);
 
   /**
    * @brief
@@ -139,7 +143,7 @@ public:
   void process();
 
 private:
-  std::vector<Slave_node_model> slave_node_models;
+  std::vector<Slave_node_model*> slave_node_models;
   Co_master_state logic_state = CO_MASTER_IDLE;
   CO_NODE& master_node;
   uint8_t max_slave_num = 0;

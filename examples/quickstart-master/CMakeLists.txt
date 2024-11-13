@@ -9,7 +9,6 @@ target_sources(
   demo-quickstart-master
   PRIVATE # application
           app/clock_app.cpp
-          app/clock_spec.cpp
           # driver
           driver/drv_nvm_sim.c)
 target_include_directories(demo-quickstart-master PRIVATE app driver)

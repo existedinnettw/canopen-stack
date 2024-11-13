@@ -77,6 +77,9 @@ extern "C"{
 #define CO_COBID_SDO_REQUEST()    CO_COBID_SDO_STD(1u,0u,0x600uL)
 #define CO_COBID_SDO_RESPONSE()   CO_COBID_SDO_STD(1u,0u,0x580uL)
 
+/**
+ * @see cia-301 ch7.2.4.3.17
+ */
 #define CO_SDO_ERR_TBIT         0x05030000    /*!< Toggle bit not alternated              */
 #define CO_SDO_ERR_TIMEOUT      0x05040000    /*!< SDO protocol timed out                 */
 #define CO_SDO_ERR_CMD          0x05040001    /*!< SDO command specifier invalid/unknown  */

@@ -65,12 +65,11 @@ Slave_node_model::get_NMT_state()
 };
 
 void
-Slave_node_model::config_pdo_mapping(Slave_model_config config)
+Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
 {
   uint32_t abort_code = 0;
   for (auto pdo_it = config.begin(); pdo_it != config.end(); ++pdo_it) {
     int pdoId = pdo_it->first;
-    printf("[DEBUG] pdo_id: %x, ", pdoId);
     assert((pdoId >= 0x1600 && pdoId <= 0x17FF) || (pdoId >= 0x1A00 && pdoId <= 0x1BFF));
     if (pdoId >= 0x1A00) {
       // txpdo of slave
@@ -80,17 +79,18 @@ Slave_node_model::config_pdo_mapping(Slave_model_config config)
       abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
       // config transfer type
       uint8_t txpdo_trans_type = 0x01;
-      abort_code =
-        this->b_send_sdo_request((0x1800 + pdoId - 0x1A00) << 8 + 0x02, 0, &txpdo_trans_type, sizeof(txpdo_trans_type));
+      abort_code = this->b_send_sdo_request(
+        ((0x1800 + pdoId - 0x1A00) << 8) + 0x02, 0, &txpdo_trans_type, sizeof(txpdo_trans_type));
 
       for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
-        int entryId = std::get<0>(*pdo_entry_it);
+        uint32_t entryId = std::get<0>(*pdo_entry_it);
+        assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
         uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
         size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
 
-        uint32_t app_obj_map = CO_LINK(entryId >> 8, entryId | 0xFF, size_in_byte * 8);
-        abort_code = this->b_send_sdo_request((pdoId << 8) + nth_mapped_object, 0, &app_obj_map, sizeof(app_obj_map));
-      }
+        uint32_t app_obj_map = CO_LINK(entryId >> 8, entryId & 0xFF, size_in_byte * 8);
+        assert(this->b_send_sdo_request((pdoId << 8) + nth_mapped_object, 0, &app_obj_map, sizeof(app_obj_map)) == 0);
+      } // end iter of pdo entry
 
       // re-enable
       num_mapped_PDO = pdo_it->second.size();
@@ -103,30 +103,32 @@ Slave_node_model::config_pdo_mapping(Slave_model_config config)
       uint8_t num_mapped_PDO = 0;
       abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
       // config transfer type
-      uint8_t rxpdo_trans_type = 0x00; // FE
-      abort_code =
-        this->b_send_sdo_request((0x1400 + pdoId - 0x1600) << 8 + 0x02, 0, &rxpdo_trans_type, sizeof(rxpdo_trans_type));
+      uint8_t rxpdo_trans_type = 0x00; // 0-->synchronous
+      abort_code = this->b_send_sdo_request(
+        ((0x1400 + pdoId - 0x1600) << 8) + 0x02, 0, &rxpdo_trans_type, sizeof(rxpdo_trans_type));
 
       for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
-        int entryId = std::get<0>(*pdo_entry_it);
+        uint32_t entryId = std::get<0>(*pdo_entry_it);
+        assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
         uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
         size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
 
-        uint32_t app_obj_map = CO_LINK(entryId >> 8, entryId | 0xFF, size_in_byte * 8);
-        abort_code = this->b_send_sdo_request((pdoId << 8) + nth_mapped_object, 0, &app_obj_map, sizeof(app_obj_map));
-      }
+        uint32_t app_obj_map = CO_LINK(entryId >> 8, entryId & 0xFF, size_in_byte * 8);
+        assert(this->b_send_sdo_request((pdoId << 8) + nth_mapped_object, 0, &app_obj_map, sizeof(app_obj_map)) == 0);
+      } // end iter of pdo entry
 
       // re-enable
       num_mapped_PDO = pdo_it->second.size();
       abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
     }
-  }
+  } // end iter of pdos
 };
 
 uint32_t
 Slave_node_model::b_send_sdo_request(uint32_t idx, bool trans_type, void* val_buf, size_t size)
 {
   CO_ERR err = CO_ERR_NONE;
+  printf("[DEBUG] idx:0x%x, val:0x%x \n", idx, *(uint32_t*)val_buf);
   while ((err = this->nb_send_sdo_request(idx, trans_type, val_buf, size)) != CO_ERR_NONE) {
     /* code */
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -169,6 +171,9 @@ TS_AppCSdoCallback(CO_CSDO* csdo, uint16_t index, uint8_t sub, uint32_t code, vo
     case CO_SDO_ERR_WR:
       printf("Attempt to write a read only object\n");
       break;
+    case CO_SDO_ERR_OBJ_MAP:
+      printf("Object cannot be mapped to the PDO\n");
+      break;
     case CO_SDO_ERR_OBJ_MAP_N:
       printf("Number and length exceed PDO\n");
       break;
@@ -190,7 +195,7 @@ TS_AppCSdoCallback(CO_CSDO* csdo, uint16_t index, uint8_t sub, uint32_t code, vo
 CO_ERR
 Slave_node_model::nb_send_sdo_request(uint32_t idx, bool trans_type, void* val_buf, size_t size)
 {
-  if (_csdo == nullptr) {
+  if (this->_csdo == nullptr) {
     throw std::runtime_error("[ERROR] SDO client is missing, you may need to bind to master first\n");
   }
   uint32_t timeout = 500;
@@ -232,7 +237,7 @@ Master_node::Master_node(CO_NODE& master_node)
 void
 Master_node::bind_slave(Slave_node_model& slave_model)
 {
-  this->slave_node_models.push_back(slave_model);
+  this->slave_node_models.push_back(&slave_model);
   size_t pos = this->slave_node_models.size() - 1;
   slave_model._csdo = COCSdoFind(&master_node, pos);
   if (slave_model._csdo == nullptr) {
@@ -268,7 +273,7 @@ Master_node::set_slaves_NMT_mode(CO_NMT_command_t cmd)
 {
   CO_NMT_sendCommand(&master_node, cmd, master_node.NodeId);
   for (auto& slave : this->slave_node_models) {
-    slave.set_NMT_mode(cmd);
+    slave->set_NMT_mode(cmd);
   }
 }
 
@@ -286,7 +291,7 @@ Master_node::start_config_slaves()
     CO_MODE state;
     bool all_preop = true;
     for (auto& slave : this->slave_node_models) {
-      state = slave.get_NMT_state();
+      state = slave->get_NMT_state();
       if (state != CO_PREOP) {
         all_preop = false;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -301,12 +306,12 @@ Master_node::start_config_slaves()
 }
 
 void
-Master_node::config_pdo_mappings(Slave_model_configs configs)
+Master_node::config_pdo_mappings(Slave_model_configs& configs)
 {
   this->self_master_pdo_mapping();
   for (auto& slave : this->slave_node_models) {
-    auto config = configs[slave.node_id];
-    slave.config_pdo_mapping(config);
+    const auto& config = configs[slave->node_id];
+    slave->config_pdo_mapping(config);
   }
 }
 

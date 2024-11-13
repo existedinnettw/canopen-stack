@@ -10,10 +10,10 @@ create_default_od()
   return {
     { CO_KEY(0x1000, 0, CO_OBJ_D___R_),
       CO_TUNSIGNED32,
-      (CO_DATA)(0x00000000) }, // device type, 0-->not standard profile
-    { CO_KEY(0x1001, 0, (CO_OBJ____PR_ | CO_OBJ_D_____)), CO_TUNSIGNED32, (CO_DATA)(0x0) }, // error reg
-    { CO_KEY(0x1005, 0, CO_OBJ_D___RW), CO_TSYNC_ID, (CO_DATA)(0x80) },                     // sync producer enable
-    { CO_KEY(0x1006, 0, CO_OBJ_D___RW), CO_TSYNC_CYCLE, (CO_DATA)(100 * 1000) },            // sync cycle time in us
+      (CO_DATA)(0x00000000) },                                            // device type, 0-->not standard profile
+    { CO_KEY(0x1001, 0, CO_OBJ_D___R_), CO_TUNSIGNED32, (CO_DATA)(0x0) }, // error reg
+    { CO_KEY(0x1005, 0, CO_OBJ_D___RW), CO_TSYNC_ID, (CO_DATA)(0x80) },   // sync producer enable
+    { CO_KEY(0x1006, 0, CO_OBJ_D___RW), CO_TSYNC_CYCLE, (CO_DATA)(100 * 1000) }, // sync cycle time in us
     { CO_KEY(0x1014, 0, CO_OBJ_D___R_), CO_TEMCY_ID, (CO_DATA)(0x00000080L) },
     { CO_KEY(0x1017, 0, CO_OBJ_D___RW), CO_THB_PROD, (CO_DATA)(0) }, // heart beat
     // Identity Object
@@ -78,7 +78,8 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
                        (CO_DATA)(2) }); // highest sub-index supported
         od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 1, CO_OBJ_D___RW),
                        CO_TPDO_ID,
-                       (CO_DATA)(0x180 + nodeId) }); // COB-ID used by RPDO
+                       (CO_DATA)(CO_COBID_RPDO_STD(1u, CO_COBID_TPDO_BASE + ((pdoId - 0x1A00) * CO_COBID_RPDO_INC)) +
+                                 nodeId) }); // COB-ID used by RPDO
         od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 2, CO_OBJ_D___RW),
                        CO_TUNSIGNED8,
                        (CO_DATA)(0x00) }); // transmission type, 0x00-->synchronous
@@ -92,7 +93,9 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
                        (CO_DATA)(pdo_it->second.size()) }); // index of object
         // iterate vector
         for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
-          int entryId = std::get<0>(*pdo_entry_it);
+          uint32_t entryId = std::get<0>(*pdo_entry_it);
+          // printf("[DEBUG] entryID:0x%x\n", entryId);
+          assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
           uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
           size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
           // mapping
@@ -122,9 +125,10 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
         od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 0, CO_OBJ_D___R_),
                        CO_TUNSIGNED8,
                        (CO_DATA)(2) }); // highest sub-index supported
-        od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 1, CO_OBJ_D___RW),
-                       CO_TPDO_ID,
-                       (CO_DATA)(0x200 + nodeId) }); // COB-ID used by TPDO
+        od.push_back(
+          { CO_KEY(0x1800 + nth_tpdo_map, 1, CO_OBJ_D___RW),
+            CO_TPDO_ID,
+            (CO_DATA)(CO_COBID_TPDO_STD(1u, CO_COBID_RPDO_BASE + ((pdoId - 0x1600) * CO_COBID_TPDO_INC)) + nodeId) });
         od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 2, CO_OBJ_D___RW),
                        CO_TUNSIGNED8,
                        (CO_DATA)(0x01) }); // transmission type, trigger by sync
@@ -139,7 +143,9 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
                        (CO_DATA)(pdo_it->second.size()) }); // index of object
         // iterate vector
         for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
-          int entryId = std::get<0>(*pdo_entry_it);
+          uint32_t entryId = std::get<0>(*pdo_entry_it);
+          // printf("[DEBUG] entryID:0x%x\n", entryId);
+          assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
           uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
           size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
           // mapping
@@ -166,19 +172,6 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
     od.push_back({ CO_KEY(0x2000 + nodeId, 0x00, CO_OBJ_D___RW),
                    CO_TUNSIGNED8,
                    (CO_DATA)(nth_mapped_memory - 1) }); // subidx highest idx
-
-    std::sort(od.begin(), od.end(), [](CO_OBJ_T a, CO_OBJ_T b) { return a.Key < b.Key; });
   } // end of node iterate
-
-  //   // self rxpdo
-  //   nth_node = 0;
-  //   for (const auto& config : configs) {
-  //     int nodeId = config.first;
-  //     std::cout << "Node ID: " << nodeId << std::endl;
-
-  //     od.push_back({ CO_KEY(0x1600 + nth_node, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(2) });
-  //     od.push_back({ CO_KEY(0x1600 + nth_node, 1, CO_OBJ_D___RW), CO_TPDO_ID, (CO_DATA)(0x180) });
-  //     od.push_back({ CO_KEY(0x1600 + nth_node, 2, CO_OBJ_D___RW), CO_TUNSIGNED8, (CO_DATA)(nodeId) });
-  //     nth_node++;
-  //   }
+  std::sort(od.begin(), od.end(), [](CO_OBJ_T a, CO_OBJ_T b) { return a.Key < b.Key; });
 };

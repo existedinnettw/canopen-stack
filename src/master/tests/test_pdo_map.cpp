@@ -18,17 +18,17 @@ protected:
         { // Inner map entry
           0x1600,
           { { // Vector of tuples
-              std::make_tuple(0x6040, 2),
-              std::make_tuple(0x607A, 4) } } },
-        { 0x1A00, { { std::make_tuple(0x6041, 2), std::make_tuple(0x6064, 4) } } },
-        { 0x1A01, { { std::make_tuple(0x6065, 2), std::make_tuple(0x6066, 4) } } },
+              std::make_tuple(0x604000, 2),
+              std::make_tuple(0x607A00, 4) } } },
+        { 0x1A00, { { std::make_tuple(0x604100, 2), std::make_tuple(0x606400, 4) } } },
+        { 0x1A01, { { std::make_tuple(0x606500, 2), std::make_tuple(0x606600, 4) } } },
       },
     },
     {
       0x79,
       {
-        { 0x1600, { { std::make_tuple(0x6040, 2), std::make_tuple(0x607A, 4) } } },
-        { 0x1A00, { { std::make_tuple(0x6041, 2) } } },
+        { 0x1600, { { std::make_tuple(0x604000, 2), std::make_tuple(0x607A00, 4) } } },
+        { 0x1A00, { { std::make_tuple(0x604100, 2) } } },
       },
     },
   };

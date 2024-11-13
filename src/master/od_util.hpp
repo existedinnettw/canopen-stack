@@ -29,6 +29,10 @@ verify_slave_pdo_configs(const Slave_model_configs& configs);
 
 // malloc OD memory based on slave PDO configs
 
+/**
+ * @attention
+ * append `CO_OBJ_DICT_ENDMARK` to vector to indicate the end of OD
+ */
 std::vector<CO_OBJ_T>
 create_default_od();
 

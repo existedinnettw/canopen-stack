@@ -85,7 +85,6 @@ extern "C" {
 typedef struct CO_NODE_T {
     struct CO_DICT_T       Dict;                                        /*!< Object dictionary      */
     struct CO_IF_T         If;                                          /*!< Can driver interface   */
-    // struct CO_IF_CAN_DRV  *Internel_can;                             /*!< Can Internal interface */
     struct lwrb            Rxed_q;                                      /*!< received message queue */
     uint8_t                Rxed_q_data[sizeof(CO_IF_FRM) * 128 + 1];   /*!< received message queue underline memory */
 

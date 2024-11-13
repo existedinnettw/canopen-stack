@@ -1,0 +1,184 @@
+#include "od_util.hpp"
+#include "co_size_only.h"
+#include <algorithm>
+#include <cassert>
+#include <iostream>
+
+std::vector<CO_OBJ_T>
+create_default_od()
+{
+  return {
+    { CO_KEY(0x1000, 0, CO_OBJ_D___R_),
+      CO_TUNSIGNED32,
+      (CO_DATA)(0x00000000) }, // device type, 0-->not standard profile
+    { CO_KEY(0x1001, 0, (CO_OBJ____PR_ | CO_OBJ_D_____)), CO_TUNSIGNED32, (CO_DATA)(0x0) }, // error reg
+    { CO_KEY(0x1005, 0, CO_OBJ_D___RW), CO_TSYNC_ID, (CO_DATA)(0x80) },                     // sync producer enable
+    { CO_KEY(0x1006, 0, CO_OBJ_D___RW), CO_TSYNC_CYCLE, (CO_DATA)(100 * 1000) },            // sync cycle time in us
+    { CO_KEY(0x1014, 0, CO_OBJ_D___R_), CO_TEMCY_ID, (CO_DATA)(0x00000080L) },
+    { CO_KEY(0x1017, 0, CO_OBJ_D___RW), CO_THB_PROD, (CO_DATA)(0) }, // heart beat
+    // Identity Object
+    { CO_KEY(0x1018, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(4) },
+    { CO_KEY(0x1018, 1, CO_OBJ_D___R_), CO_TUNSIGNED32, (CO_DATA)(0) },
+    { CO_KEY(0x1018, 2, CO_OBJ_D___R_), CO_TUNSIGNED32, (CO_DATA)(0) },
+    { CO_KEY(0x1018, 3, CO_OBJ_D___R_), CO_TUNSIGNED32, (CO_DATA)(0) },
+    { CO_KEY(0x1018, 4, CO_OBJ_D___R_), CO_TUNSIGNED32, (CO_DATA)(0) },
+    // SDO server parameter
+    { CO_KEY(0x1200, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(2) },
+    { CO_KEY(0x1200, 1, CO_OBJ_DN__R_), CO_TUNSIGNED32, (CO_DATA)(CO_COBID_SDO_REQUEST()) },
+    { CO_KEY(0x1200, 2, CO_OBJ_DN__R_), CO_TUNSIGNED32, (CO_DATA)(CO_COBID_SDO_RESPONSE()) },
+    // SDO client parameter, create based on slave num later
+    // rxpdo parameter, later
+    // self rxpdo, later
+    // txpdo parameter, later
+    // self txpdo, later
+    // user entries, later
+  };
+}
+
+/**
+ * @todo return pointer of pdo data, return slave entry to pointer of pdo data?
+ *
+ */
+void
+config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& configs)
+{
+  // SDO client parameter
+  for (auto it = configs.begin(); it != configs.end(); ++it) {
+    size_t nth_node = std::distance(configs.begin(), it);
+    int nodeId = it->first;
+
+    od.push_back({ CO_KEY(0x1280 + nth_node, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(3) });
+    // client -> server (tx)
+    od.push_back({ CO_KEY(0x1280 + nth_node, 1, CO_OBJ_D___RW), CO_TSDO_ID, (CO_DATA)(0x600) });
+    // rx
+    od.push_back({ CO_KEY(0x1280 + nth_node, 2, CO_OBJ_D___RW), CO_TSDO_ID, (CO_DATA)(0x580) });
+    od.push_back({ CO_KEY(0x1280 + nth_node, 3, CO_OBJ_D___RW), CO_TUNSIGNED8, (CO_DATA)(nodeId) });
+  }
+
+  size_t nth_rpdo_map = 0;
+  size_t nth_tpdo_map = 0;
+  for (auto node_it = configs.begin(); node_it != configs.end(); ++node_it) {
+    size_t nth_node = std::distance(configs.begin(), node_it);
+    int nodeId = node_it->first;
+    uint8_t nth_mapped_memory = 1;
+
+    for (auto pdo_it = node_it->second.begin(); pdo_it != node_it->second.end(); ++pdo_it) {
+      // need to map based on iterate
+      int pdoId = pdo_it->first;
+      printf("[DEBUG] pdo_id: %x, ", pdoId);
+      assert((pdoId >= 0x1600 && pdoId <= 0x17FF) || (pdoId >= 0x1A00 && pdoId <= 0x1BFF));
+
+      if (pdoId >= 0x1A00) {
+        // txpdo of slave --> rxpdo of master
+        printf("is_rpdo");
+
+        // RPDO communication parameter
+        od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 0, CO_OBJ_D___R_),
+                       CO_TUNSIGNED8,
+                       (CO_DATA)(2) }); // highest sub-index supported
+        od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 1, CO_OBJ_D___RW),
+                       CO_TPDO_ID,
+                       (CO_DATA)(0x180 + nodeId) }); // COB-ID used by RPDO
+        od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 2, CO_OBJ_D___RW),
+                       CO_TUNSIGNED8,
+                       (CO_DATA)(0x00) }); // transmission type, 0x00-->synchronous
+                                           // inhibit time
+                                           // compatibility entry
+                                           // event-timer
+
+
+        od.push_back({ CO_KEY(0x1600 + nth_rpdo_map, 0, CO_OBJ_D___R_),
+                       CO_TUNSIGNED8,
+                       (CO_DATA)(pdo_it->second.size()) }); // index of object
+        // iterate vector
+        for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
+          int entryId = std::get<0>(*pdo_entry_it);
+          uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
+          size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
+          // mapping
+          od.push_back(
+            { CO_KEY(0x1600 + nth_rpdo_map, nth_mapped_object, CO_OBJ_D___R_),
+              CO_TUNSIGNED32,
+              (CO_DATA)(CO_LINK(0x2000 + nodeId, nth_mapped_memory, size_in_byte * 8)) }); // 1st mapped object
+
+
+          od.push_back({ CO_KEY(0x2000 + nodeId, nth_mapped_memory, CO_OBJ_D___RW),
+                         size_to_obj_type(size_in_byte),
+                         (CO_DATA)(0) });
+          nth_mapped_memory++;
+          /**
+           * @todo create relevant object at 0x20xx for mapping
+           */
+        } // end of entry iterate
+
+        nth_rpdo_map++;
+      } // end of rpdo iterate
+
+      else {
+        // rxpdo of slave --> txpdo of master
+        printf("is_tpdo");
+
+        // RPDO communication parameter
+        od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 0, CO_OBJ_D___R_),
+                       CO_TUNSIGNED8,
+                       (CO_DATA)(2) }); // highest sub-index supported
+        od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 1, CO_OBJ_D___RW),
+                       CO_TPDO_ID,
+                       (CO_DATA)(0x200 + nodeId) }); // COB-ID used by TPDO
+        od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 2, CO_OBJ_D___RW),
+                       CO_TUNSIGNED8,
+                       (CO_DATA)(0x01) }); // transmission type, trigger by sync
+                                           // inhibit time
+                                           // reserved
+                                           // event-timer
+                                           // SYNC start value
+
+
+        od.push_back({ CO_KEY(0x1A00 + nth_tpdo_map, 0, CO_OBJ_D___R_),
+                       CO_TUNSIGNED8,
+                       (CO_DATA)(pdo_it->second.size()) }); // index of object
+        // iterate vector
+        for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
+          int entryId = std::get<0>(*pdo_entry_it);
+          uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
+          size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
+          // mapping
+          od.push_back(
+            { CO_KEY(0x1A00 + nth_tpdo_map, nth_mapped_object, CO_OBJ_D___R_),
+              CO_TUNSIGNED32,
+              (CO_DATA)(CO_LINK(0x2000 + nodeId, nth_mapped_memory, size_in_byte * 8)) }); // 1st mapped object
+
+          od.push_back({ CO_KEY(0x2000 + nodeId, nth_mapped_memory, CO_OBJ_D___RW),
+                         size_to_obj_type(size_in_byte),
+                         (CO_DATA)(0) });
+          nth_mapped_memory++;
+          /**
+           * @todo create relevant object at 0x20xx for mapping
+           */
+        } // end of entry iterate
+
+        nth_tpdo_map++;
+      } // end of tpdo iterate
+
+
+      printf("\n");
+    } // end of pdo iterate
+    od.push_back({ CO_KEY(0x2000 + nodeId, 0x00, CO_OBJ_D___RW),
+                   CO_TUNSIGNED8,
+                   (CO_DATA)(nth_mapped_memory - 1) }); // subidx highest idx
+
+    std::sort(od.begin(), od.end(), [](CO_OBJ_T a, CO_OBJ_T b) { return a.Key < b.Key; });
+  } // end of node iterate
+
+  //   // self rxpdo
+  //   nth_node = 0;
+  //   for (const auto& config : configs) {
+  //     int nodeId = config.first;
+  //     std::cout << "Node ID: " << nodeId << std::endl;
+
+  //     od.push_back({ CO_KEY(0x1600 + nth_node, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(2) });
+  //     od.push_back({ CO_KEY(0x1600 + nth_node, 1, CO_OBJ_D___RW), CO_TPDO_ID, (CO_DATA)(0x180) });
+  //     od.push_back({ CO_KEY(0x1600 + nth_node, 2, CO_OBJ_D___RW), CO_TUNSIGNED8, (CO_DATA)(nodeId) });
+  //     nth_node++;
+  //   }
+};

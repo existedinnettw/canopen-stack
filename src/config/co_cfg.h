@@ -32,7 +32,7 @@
 *    will support.
 */
 #ifndef CO_CSDO_N
-#define CO_CSDO_N               1
+#define CO_CSDO_N               16
 #endif
 
 /*! \brief DEFAULT EMERGENCY CODES
@@ -50,7 +50,7 @@
 *    will support.
 */
 #ifndef CO_RPDO_N
-#define CO_RPDO_N               4
+#define CO_RPDO_N               (4*CO_CSDO_N)
 #endif
 
 /*! \brief DEFAULT TRANSMIT PDO
@@ -59,7 +59,7 @@
 *    will support.
 */
 #ifndef CO_TPDO_N
-#define CO_TPDO_N               4
+#define CO_TPDO_N               (4*CO_CSDO_N)
 #endif
 
 /*! \brief DEFAULT ENABLE LSS

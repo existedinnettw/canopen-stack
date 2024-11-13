@@ -3,8 +3,11 @@
 #include "co_core.h"
 
 #include <map>
+#include <od_util.hpp>
 #include <thread>
 #include <vector>
+
+// #include "pdo_map.hpp"
 
 /**
  * may use `COIfCanReceive` to add master logic.
@@ -44,9 +47,10 @@ public:
   CO_MODE get_NMT_state();
 
   /**
-   * config pdo mapping through SDO client
+   * @brief
+   * config pdo mapping of slave through SDO client
    */
-  void config_pdo_mapping();
+  void config_pdo_mapping(Slave_model_config config);
 
   /**
    * @details
@@ -67,10 +71,11 @@ public:
    */
   uint32_t _last_csdo_abort_code;
 
-private:
   // remote slave OD store in underline memory
   uint8_t node_id = 127; // node id shoul in [1, 127]
 
+  CO_CSDO* _csdo = nullptr; // private, friend, master_node only
+private:
   Nmt_monitor_method monitor_method = HEARTBEAT;
   CO_MODE _RXPDO_TIMEOUT_fake_nmt_mode = CO_INIT;
 
@@ -91,13 +96,15 @@ public:
    * @details
    * will create basic OD
    */
-  Master_node(CO_NODE& master_node)
-    : master_node(master_node) {
-      // od construct
-    };
-  Master_node(const Master_node&)
-    : master_node(master_node) {};
+  Master_node(CO_NODE& master_node);
+  /**
+   *@see rule of three
+   */
+  Master_node(const Master_node& other) // II. copy constructor
+    : Master_node(other.master_node) {};
   ~Master_node() {};
+
+  void bind_slave(Slave_node_model& slave_model);
 
   /**
    * @brief
@@ -112,9 +119,10 @@ public:
   void start_config_slaves();
 
   /**
-   *
+   * @brief
+   * config all pdo mapping of slaves through SDO client
    */
-  void config_pdos();
+  void config_pdo_mappings(Slave_model_configs configs);
 
   /**
    * @brief
@@ -130,12 +138,11 @@ public:
    */
   void process();
 
-  // add node model through push_back directly
-  std::vector<Slave_node_model> slave_node_models;
-
 private:
+  std::vector<Slave_node_model> slave_node_models;
   Co_master_state logic_state = CO_MASTER_IDLE;
   CO_NODE& master_node;
+  uint8_t max_slave_num = 0;
 
   std::thread config_commu_thread;
 

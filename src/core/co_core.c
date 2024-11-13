@@ -120,7 +120,6 @@ void CORxPoll(CO_NODE *node){
     while(true){
         result = COIfCanRead(&node->If, &frm);
         if(result < 0){
-            printf("[WARN] COIfCanRead with CO_ERR_IF_CAN_READ error and with internel Error code %d\n", result);
             break;
         }else if(result==0){
             break;

@@ -182,44 +182,6 @@ void handle_error_en(int err, const char *msg)
     exit(EXIT_FAILURE);
 }
 
-void TS_AppCSdoCallback(CO_CSDO *csdo, uint16_t index, uint8_t sub, uint32_t code, void *args)
-{
-    // checkout Table 22: SDO abort codes, CO_SDO_ERR_OBJ
-    // The stack not yet implement response handle yet
-    // can refer to `COSdoGetObject` and `igh::ecrt_sdo_request_state, ec_sdo_request_t`
-    // check COCSdoTransferFinalize for calling detail
-
-    printf("[DEBUG] sdo received response\n");
-    printf("[DEBUG] index: 0x%04x, sub: 0x%02x, code: 0x%08x\n", index, sub, code);
-
-    switch (code)
-    {
-    case 0:
-        printf("[DEBUG] SDO response successy\n");
-        // store the value
-        break;
-    // decode based on abort code
-    case CO_SDO_ERR_TIMEOUT:
-        printf("[WARN] SDO protocol timed out\n");
-        break;
-    case CO_SDO_ERR_OBJ:
-        printf("[WARN] Object doesn't exist in target dictionary\n");
-        break;
-    case CO_SDO_ERR_WR:
-        printf("[WARN] Attempt to write a read only object\n");
-        break;
-    case CO_SDO_ERR_OBJ_MAP_N:
-        printf("[WARN] Number and length exceed PDO\n");
-        break;
-    case CO_SDO_ERR_DATA_LOCAL:
-        printf("[WARN] Data cannot be transferred or stored to the application because of local control\n");
-        break;
-    default:
-        printf("[WARN] general abort sdo request\n");
-        break;
-    }
-}
-
 // void COPdoTransmit(CO_IF_FRM *frm){
 //     printf("[DEBUG] tpdo will transmit\n");
 // }
@@ -271,7 +233,7 @@ int main(void)
 
     auto slave_mot = Slave_node_model(0x02, master_node, RXPDO_TIMEOUT);
 
-    master.slave_node_models.push_back(slave_mot); // todo: may need mapping
+    master.bind_slave(slave_mot); // todo: may need mapping
     master.start_config_slaves();
 
     CO_CSDO *csdo;
@@ -345,6 +307,8 @@ int main(void)
     // NMT OP
     // CO_NMT_sendCommand(&master_node, CO_NMT_ENTER_OPERATIONAL, 0x02);
     // CONmtSetMode(&master_node.Nmt, CO_OPERATIONAL);
+    // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
     master.activate();
 
     pthread_t thread;

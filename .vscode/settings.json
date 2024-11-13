@@ -1,5 +1,13 @@
 {
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
   "cmake.configureOnOpen": true,
-  "cmakeExplorer.suiteDelimiter": "/"
+  "cmakeExplorer.suiteDelimiter": "/",
+  "C_Cpp.autoAddFileAssociations": false,
+  "files.associations": {
+    "Kconfig": "kconfig",
+    "*.h": "c",
+    "*.c": "c",
+    "*.hpp": "cpp",
+    "*.cpp": "cpp",
+  },
 }

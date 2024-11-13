@@ -111,7 +111,10 @@ target_link_libraries(canopen-stack PUBLIC lwrb)
 target_compile_options(canopen-stack PRIVATE "-std=c2x")
 
 # cmake-format: on
-add_library(canopen-stack-master master/co_nmt_master.c master/co_master.cpp)
+add_library(canopen-stack-master master/co_nmt_master.c master/co_master.cpp
+                                 master/od_util.cpp master/co_size_only.c)
 target_compile_options(canopen-stack-master PRIVATE "-std=c++17")
 target_link_libraries(canopen-stack-master PUBLIC canopen-stack)
 target_include_directories(canopen-stack-master PUBLIC master)
+
+add_subdirectory(master/tests)

@@ -60,23 +60,7 @@ static volatile sig_atomic_t keep_running = 1;
  * PRIVATE FUNCTIONS
  ******************************************************************************/
 
-void print_od(CO_NODE *node, uint16_t after_p_idx = 0x0)
-{
-    CO_OBJ_T *OD = node->Dict.Root;
-    for (int i = 0; i < node->Dict.Num; i++)
-    // CO_OBJ_T *OD = od.data();
-    // for (int i = 0; i < od.size(); i++)
-    {
-        uint16_t p_idx = OD[i].Key >> 16;
-        if (p_idx < after_p_idx)
-            continue;
-        uint8_t sub_idx = (OD[i].Key >> 8) & 0xFF;
-        auto type = OD[i].Type;
-
-        // printf("key:0x%x \n", OD[i].Key);
-        printf("p_idx:0x%x sub_idx:0x%x data:0x%lx \n", p_idx, sub_idx, OD[i].Data);
-    }
-}
+PDO_data_map pdo_data_map;
 
 /* timer callback function */
 static void AppClock(void *p_arg)
@@ -105,39 +89,13 @@ static void AppClock(void *p_arg)
      */
     if (CONmtGetMode(&node->Nmt) == CO_OPERATIONAL)
     {
-
-        od_sec = CODictFind(&node->Dict, CO_DEV(0x2100, 3));
-        od_min = CODictFind(&node->Dict, CO_DEV(0x2100, 2));
-        od_hr = CODictFind(&node->Dict, CO_DEV(0x2100, 1));
-
-        COObjRdValue(od_sec, node, (void *)&second, sizeof(second));
-        COObjRdValue(od_min, node, (void *)&minute, sizeof(minute));
-        COObjRdValue(od_hr, node, (void *)&hour, sizeof(hour));
-
-        second++;
-        if (second >= 60)
-        {
-            second = 0;
-            minute++;
-        }
-        if (minute >= 60)
-        {
-            minute = 0;
-            hour++;
-        }
-
-        COObjWrValue(od_hr, node, (void *)&hour, sizeof(hour));
-        COObjWrValue(od_min, node, (void *)&minute, sizeof(minute));
-        COObjWrValue(od_sec, node, (void *)&second, sizeof(second));
-
-        uint16_t status_wd = 0;
-        COObjRdValue(CODictFind(&node->Dict, CO_DEV(0x2200, 0)), node, (void *)&status_wd, sizeof(status_wd));
-        printf("status wd: 0x%04x\n", status_wd);
-        printf("my node mode:%d \n", node->Nmt.Mode);
     }
 
-    print_od(node, 0x2000);
-    printf("app clock called\n");
+    print_od(node->Dict.Root, 0x1400);
+    printf("---\n");
+    print_data_map(pdo_data_map);
+    printf("status wd: 0x%x\n", *(uint16_t *)(pdo_data_map[std::make_tuple(2, 0x604100)]));
+    printf("app clock called\n\n");
 }
 
 struct timespec
@@ -251,17 +209,15 @@ static CO_EMCY_TBL AppEmcyTbl[APP_ERR_ID_NUM] = {
 /* main entry function */
 int main(void)
 {
-    std::vector<CO_OBJ_T> od = create_default_od();
-    config_od_through_configs(od, slaveConfigs);
-    od.push_back(CO_OBJ_DICT_ENDMARK);
-
     /* Initialize your hardware layer */
     /* BSPInit(); */
     signal(SIGINT, sig_handler);
 
-    /* Initialize the CANopen stack. Stop execution if an
-     * error is detected.
-     */
+    std::vector<CO_OBJ_T> od = create_default_od();
+    Imd_PDO_data_map imd_pdo_data_map = config_od_through_configs(od, slaveConfigs);
+    pdo_data_map = get_PDO_data_map(od, imd_pdo_data_map);
+    od.push_back(CO_OBJ_DICT_ENDMARK);
+
     CO_LNX_SKTCAN Linux_Socketcan_CanDriver;
     COLnxSktCanInit(&Linux_Socketcan_CanDriver, "can0");
 
@@ -303,7 +259,6 @@ int main(void)
 
     master.config_pdo_mappings(slaveConfigs);
 
-    // ==================================================local pdo map set============================================================
     master.activate();
 
     pthread_t thread;
@@ -321,7 +276,7 @@ int main(void)
         handle_error_en(ret, "pthread_create");
     }
 
-    print_od(&master_node);
+    print_od(master_node.Dict.Root);
 
     void *status;
     pthread_join(thread, &status);

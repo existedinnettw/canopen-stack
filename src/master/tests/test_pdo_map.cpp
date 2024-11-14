@@ -43,19 +43,17 @@ TEST_F(OD_test, pdo_configs_creat_test)
 TEST_F(OD_test, od_creat_test)
 {
   std::vector<CO_OBJ_T> od = create_default_od();
-  config_od_through_configs(od, slaveConfigs);
+  Imd_PDO_data_map imd_pdo_data_map = config_od_through_configs(od, slaveConfigs);
+  od.push_back(CO_OBJ_DICT_ENDMARK);
+  PDO_data_map pdo_data_map = get_PDO_data_map(od, imd_pdo_data_map);
 
   CO_OBJ_T* OD = od.data();
-  for (int i = 0; i < od.size(); i++) {
-    uint16_t p_idx = OD[i].Key >> 16;
-    uint8_t sub_idx = (OD[i].Key >> 8) & 0xFF;
-    auto type = OD[i].Type;
+  print_od(od.data());
 
-    // printf("key:0x%x \n", OD[i].Key);
-    printf("p_idx:0x%x sub_idx:0x%x data:0x%lx \n", p_idx, sub_idx, OD[i].Data);
-  }
-
-  // num = CODictInit(&node->Dict, node, od.data(), od.size());
+  *(uint16_t*)(pdo_data_map[std::make_tuple(2, 0x607A00)]) = 5;
+  printf("---\ndata map:\n");
+  print_data_map(pdo_data_map);
+  ASSERT_EQ(*(uint16_t*)(pdo_data_map[std::make_tuple(2, 0x607A00)]), 5);
 }
 
 

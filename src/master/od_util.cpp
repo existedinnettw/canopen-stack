@@ -1,10 +1,10 @@
 #include "od_util.hpp"
 #include "co_size_only.h"
-#include <algorithm>
+#include <algorithm> //std::find
 #include <cassert>
 #include <iostream>
 
-std::vector<CO_OBJ_T>
+std::vector<CO_OBJ>
 create_default_od()
 {
   return {
@@ -39,9 +39,11 @@ create_default_od()
  * @todo return pointer of pdo data, return slave entry to pointer of pdo data?
  *
  */
-void
-config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& configs)
+Imd_PDO_data_map
+config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& configs)
 {
+  Imd_PDO_data_map ret_imd_pdo_data_map;
+
   // SDO client parameter
   for (auto it = configs.begin(); it != configs.end(); ++it) {
     size_t nth_node = std::distance(configs.begin(), it);
@@ -64,7 +66,7 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
 
     for (auto pdo_it = node_it->second.begin(); pdo_it != node_it->second.end(); ++pdo_it) {
       // need to map based on iterate
-      int pdoId = pdo_it->first;
+      uint16_t pdoId = pdo_it->first;
       printf("[DEBUG] pdo_id: %x, ", pdoId);
       assert((pdoId >= 0x1600 && pdoId <= 0x17FF) || (pdoId >= 0x1A00 && pdoId <= 0x1BFF));
 
@@ -91,12 +93,15 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
         od.push_back({ CO_KEY(0x1600 + nth_rpdo_map, 0, CO_OBJ_D___R_),
                        CO_TUNSIGNED8,
                        (CO_DATA)(pdo_it->second.size()) }); // index of object
+        uint8_t tot_byte = 0;
         // iterate vector
         for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
           uint32_t entryId = std::get<0>(*pdo_entry_it);
           // printf("[DEBUG] entryID:0x%x\n", entryId);
           assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
           uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
+          tot_byte += size_in_byte;
+          assert(tot_byte <= 8 && "CANopen in CANbus CC require DLC <= 8");
           size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
           // mapping
           od.push_back(
@@ -108,6 +113,7 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
           od.push_back({ CO_KEY(0x2000 + nodeId, nth_mapped_memory, CO_OBJ_D___RW),
                          size_to_obj_type(size_in_byte),
                          (CO_DATA)(0) });
+          ret_imd_pdo_data_map[std::make_tuple(nodeId, entryId)] = CO_DEV(0x2000 + nodeId, nth_mapped_memory) >> 8;
           nth_mapped_memory++;
           /**
            * @todo create relevant object at 0x20xx for mapping
@@ -141,12 +147,16 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
         od.push_back({ CO_KEY(0x1A00 + nth_tpdo_map, 0, CO_OBJ_D___R_),
                        CO_TUNSIGNED8,
                        (CO_DATA)(pdo_it->second.size()) }); // index of object
+
+        uint8_t tot_byte = 0;
         // iterate vector
         for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
           uint32_t entryId = std::get<0>(*pdo_entry_it);
           // printf("[DEBUG] entryID:0x%x\n", entryId);
           assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
           uint8_t size_in_byte = std::get<1>(*pdo_entry_it);
+          tot_byte += size_in_byte;
+          assert(tot_byte <= 8 && "CANopen in CANbus CC require DLC <= 8");
           size_t nth_mapped_object = std::distance(pdo_it->second.begin(), pdo_entry_it) + 1;
           // mapping
           od.push_back(
@@ -157,6 +167,7 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
           od.push_back({ CO_KEY(0x2000 + nodeId, nth_mapped_memory, CO_OBJ_D___RW),
                          size_to_obj_type(size_in_byte),
                          (CO_DATA)(0) });
+          ret_imd_pdo_data_map[std::make_tuple(nodeId, entryId)] = CO_DEV(0x2000 + nodeId, nth_mapped_memory) >> 8;
           nth_mapped_memory++;
           /**
            * @todo create relevant object at 0x20xx for mapping
@@ -173,5 +184,56 @@ config_od_through_configs(std::vector<CO_OBJ_T>& od, const Slave_model_configs& 
                    CO_TUNSIGNED8,
                    (CO_DATA)(nth_mapped_memory - 1) }); // subidx highest idx
   } // end of node iterate
-  std::sort(od.begin(), od.end(), [](CO_OBJ_T a, CO_OBJ_T b) { return a.Key < b.Key; });
+
+  // sort for binary search
+  std::sort(od.begin(), od.end(), [](CO_OBJ a, CO_OBJ b) { return a.Key < b.Key; });
+  return ret_imd_pdo_data_map;
 };
+
+PDO_data_map
+get_PDO_data_map(std::vector<CO_OBJ>& od, const Imd_PDO_data_map& imd_pdo_data_map)
+{
+  PDO_data_map ret_pdo_data_map;
+  for (auto node_pdo_it = imd_pdo_data_map.begin(); node_pdo_it != imd_pdo_data_map.end(); ++node_pdo_it) {
+    uint8_t node_id = std::get<0>(node_pdo_it->first);
+    uint32_t pdo_idx = std::get<1>(node_pdo_it->first);
+    uint32_t local_od_idx = node_pdo_it->second;
+    std::vector<CO_OBJ>::iterator it = std::lower_bound(
+      od.begin(), od.end(), local_od_idx, [](const CO_OBJ& obj, uint32_t idx) { return (obj.Key >> 8) < idx; });
+    ret_pdo_data_map[std::make_tuple(node_id, pdo_idx)] = (void*)(&it->Data);
+  } // end of node iterate
+  return ret_pdo_data_map;
+}
+
+void
+print_od(CO_OBJ_T* OD, uint16_t after_p_idx)
+{
+  for (uint32_t i = 0; i < 0xFFFFFF; i++)
+  // CO_OBJ_T *OD = od.data();
+  // for (int i = 0; i < od.size(); i++)
+  {
+    uint16_t p_idx = OD[i].Key >> 16;
+    if (p_idx == 0) {
+      // touch CO_OBJ_DICT_ENDMARK
+      break;
+    }
+    if (p_idx < after_p_idx)
+      continue;
+    uint8_t sub_idx = (OD[i].Key >> 8) & 0xFF;
+    auto type = OD[i].Type;
+
+    // printf("key:0x%x \n", OD[i].Key);
+    printf("p_idx:0x%x sub_idx:0x%x data:0x%lx \n", p_idx, sub_idx, OD[i].Data);
+  }
+}
+
+void
+print_data_map(const PDO_data_map& pdo_data_map)
+{
+  for (auto& [node_idx_tup, pdo_data] : pdo_data_map) {
+    // printf("pdo_idx:0x%x data:%p \n", pdo_idx, pdo_data);
+    auto node_id = std::get<0>(node_idx_tup);
+    auto pdo_idx = std::get<1>(node_idx_tup);
+    printf("node_id:%d, pdo_idx:0x%x, data:0x%04x, data_ptr:%p \n", node_id, pdo_idx, *(uint32_t*)pdo_data, pdo_data);
+  }
+}

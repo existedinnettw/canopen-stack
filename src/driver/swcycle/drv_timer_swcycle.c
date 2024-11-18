@@ -19,6 +19,7 @@
 ******************************************************************************/
 
 #include "drv_timer_swcycle.h"
+#include <stdio.h>
 
 /******************************************************************************
 * PRIVATE VARIABLES
@@ -67,6 +68,7 @@ static void DrvTimerStart(void)
 static uint8_t DrvTimerUpdate(void)
 {
     uint8_t result = 0u;
+    // printf("%d, ", TimerCounter); // debug
 
     if (TimerCounter > 0u) {
         TimerCounter--;

@@ -15,8 +15,10 @@
 
 enum Co_master_state
 {
-  CO_MASTER_IDLE,  // can config all NMT slave node, and they stayed in PREOP
-  CO_MASTER_ACTIVE // all slave switched to OP state
+  CO_MASTER_IDLE,   // can config all NMT slave node, and they stayed in PREOP
+  CO_MASTER_ACTIVE, // all slave switched to OP state
+  CO_MASTER_EXITING,
+  CO_MASTER_EXIT
 };
 
 enum Nmt_monitor_method
@@ -102,7 +104,7 @@ public:
    */
   Master_node(const Master_node& other) // II. copy constructor
     : Master_node(other.master_node) {};
-  ~Master_node() {};
+  ~Master_node();
 
   /**
    * @attention
@@ -125,6 +127,8 @@ public:
   /**
    * @brief
    * config all pdo mapping of slaves through SDO client
+   * @details
+   * currently, all pdo of slaves will be configed in synchronous
    */
   void config_pdo_mappings(Slave_model_configs& configs);
 
@@ -142,6 +146,8 @@ public:
    */
   void process();
 
+  void release();
+
 private:
   std::vector<Slave_node_model*> slave_node_models;
   Co_master_state logic_state = CO_MASTER_IDLE;
@@ -150,6 +156,9 @@ private:
 
   std::thread config_commu_thread;
 
-  void self_master_pdo_mapping();
+  /**
+   * @brief
+   * set both master and slaves NMT state
+   */
   void set_slaves_NMT_mode(CO_NMT_command_t cmd);
 };

@@ -91,11 +91,18 @@ static void AppClock(void *p_arg)
     {
     }
 
-    print_od(node->Dict.Root, 0x1400);
+    // printf("\n");
+    // print_od(node->Dict.Root, 0x2000);
     printf("---\n");
     print_data_map(pdo_data_map);
-    printf("status wd: 0x%x\n", *(uint16_t *)(pdo_data_map[std::make_tuple(2, 0x604100)]));
-    printf("app clock called\n\n");
+    // printf("status wd: 0x%x\n", *(uint16_t *)(pdo_data_map[std::make_tuple(2, 0x604100)]));
+    // CO_ERR err = CONodeGetErr(&master_node);
+    // if (err != CO_ERR_NONE)
+    // {
+    //     printf("[DEBUG] co node failed with code: %d\n", err);
+    //     exit(EXIT_FAILURE);
+    // }
+    printf("app clock called, my state:%d\n", node->Nmt.Mode);
 }
 
 struct timespec
@@ -150,7 +157,7 @@ void *rt_cb(void *args)
         }
         wakeup_time = timespec_add(wakeup_time, (struct timespec){.tv_sec = 0, .tv_nsec = tv_nsec});
     }
-    printf("rt thread exit success\n");
+    printf("\nrt thread exit success\n");
     return 0;
 }
 
@@ -169,7 +176,6 @@ static void sig_handler(int _)
 {
     (void)_;
     keep_running = 0;
-    exit(EXIT_FAILURE);
 }
 
 /******************************************************************************
@@ -184,12 +190,22 @@ Slave_model_configs slaveConfigs = {
             {0x1A00, {{std::make_tuple(0x604100, 2), std::make_tuple(0x606C00, 4)}}},
         },
     },
+    {
+        3,
+        {
+            {0x1600, {{std::make_tuple(0x604000, 2), std::make_tuple(0x604200, 2)}}},
+            {0x1A00, {{std::make_tuple(0x604100, 2), std::make_tuple(0x606C00, 4)}}},
+            // {0x1A01, {{std::make_tuple(0x60FD00, 4), std::make_tuple(0x606400, 4)}}},
+            {0x1A01, {}}, // disable only
+            {0x1A02, {}},
+            {0x1A03, {}},
+        },
+    },
 };
-#define APP_NODE_ID 1u          /* CANopen node ID             */
-#define APP_BAUDRATE 1000000u   /* CAN baudrate                */
-#define APP_TMR_N 16u           /* Number of software timers   */
-#define APP_TICKS_PER_SEC 1000u /* Timer clock frequency in Hz */
-#define APP_OBJ_N 128u          /* Object dictionary max size  */
+#define APP_NODE_ID 1u                 /* CANopen node ID             */
+#define APP_BAUDRATE 1000000u          /* CAN baudrate                */
+#define APP_TMR_N (8 * CO_CSDO_N + 16) /* Number of software timers   */
+#define APP_TICKS_PER_SEC 1000u        /* Timer clock frequency in Hz */
 
 static CO_TMR_MEM TmrMem[APP_TMR_N];
 
@@ -247,17 +263,23 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
+    // tmr since have bug, if loading large in pdo
     COTmrCreate(&master_node.Tmr, 0, COTmrGetTicks(&master_node.Tmr, 1000, CO_TMR_UNIT_1MS), AppClock, &master_node);
+
+    print_od(master_node.Dict.Root);
 
     auto master = Master_node(master_node);
     master.start_config();
 
-    auto slave_mot = Slave_node_model(0x02, master_node, RXPDO_TIMEOUT);
+    auto slave_mot1 = Slave_node_model(0x02, master_node, RXPDO_TIMEOUT);
+    auto slave_mot2 = Slave_node_model(0x03, master_node, RXPDO_TIMEOUT); // HEARTBEAT
 
-    master.bind_slave(slave_mot); // todo: may need mapping
+    master.bind_slave(slave_mot1); // todo: may need mapping
+    master.bind_slave(slave_mot2);
     master.start_config_slaves();
 
     master.config_pdo_mappings(slaveConfigs);
+    // exit(EXIT_SUCCESS);
 
     master.activate();
 
@@ -276,9 +298,15 @@ int main(void)
         handle_error_en(ret, "pthread_create");
     }
 
-    print_od(master_node.Dict.Root);
+    // print_od(master_node.Dict.Root);
 
     void *status;
     pthread_join(thread, &status);
+
+    master.start_config_slaves();
+    master.start_config();
+    master.release();
+    printf("program end\n");
+
     return (int)(intptr_t)status;
 }

@@ -68,6 +68,7 @@ void
 Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
 {
   uint32_t abort_code = 0;
+  printf("[DEBUG] start pdo mapping for node:%d\n", this->node_id);
   for (auto pdo_it = config.begin(); pdo_it != config.end(); ++pdo_it) {
     int pdoId = pdo_it->first;
     assert((pdoId >= 0x1600 && pdoId <= 0x17FF) || (pdoId >= 0x1A00 && pdoId <= 0x1BFF));
@@ -76,12 +77,24 @@ Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
 
       // close txpdo first
       uint8_t num_mapped_PDO = 0;
-      abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
-      // config transfer type
-      uint8_t txpdo_trans_type = 0x01;
+      abort_code = this->b_send_sdo_request((pdoId << 8) + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
+
+      //  config transfer type
+      uint8_t txpdo_trans_type = 0x01; // synchronous (cyclic every sync)
       abort_code = this->b_send_sdo_request(
         ((0x1800 + pdoId - 0x1A00) << 8) + 0x02, 0, &txpdo_trans_type, sizeof(txpdo_trans_type));
 
+      if (pdo_it->second.size() == 0) {
+        // no mapping
+        // disable tpdo, may better read it first
+        uint32_t cobid_used_by_tpdo =
+          CO_COBID_TPDO_STD(0u, CO_COBID_TPDO_BASE + ((pdoId - 0x1A00) * CO_COBID_TPDO_INC)) + node_id;
+        abort_code = this->b_send_sdo_request(
+          ((0x1800 + pdoId - 0x1A00) << 8) + 0x01, 0, &cobid_used_by_tpdo, sizeof(cobid_used_by_tpdo));
+        continue;
+      }
+
+      // have mapping
       for (auto pdo_entry_it = pdo_it->second.begin(); pdo_entry_it != pdo_it->second.end(); ++pdo_entry_it) {
         uint32_t entryId = std::get<0>(*pdo_entry_it);
         assert(entryId >= 0x200000 && entryId <= 0xFFFFFF);
@@ -94,14 +107,14 @@ Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
 
       // re-enable
       num_mapped_PDO = pdo_it->second.size();
-      abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
-
-    } else {
+      abort_code = this->b_send_sdo_request((pdoId << 8) + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
+    } // end txpdo of slave iterate
+    else {
       // rxpdo of slave
 
       // close rxpdo first
       uint8_t num_mapped_PDO = 0;
-      abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
+      abort_code = this->b_send_sdo_request((pdoId << 8) + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
       // config transfer type
       uint8_t rxpdo_trans_type = 0x00; // 0-->synchronous
       abort_code = this->b_send_sdo_request(
@@ -119,16 +132,23 @@ Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
 
       // re-enable
       num_mapped_PDO = pdo_it->second.size();
-      abort_code = this->b_send_sdo_request(pdoId << 8 + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
-    }
+      if (num_mapped_PDO) {
+        abort_code = this->b_send_sdo_request((pdoId << 8) + 0x00, 0, &num_mapped_PDO, sizeof(num_mapped_PDO));
+      }
+    } // end rxpdo of slave iterate
   } // end iter of pdos
+  printf("[DEBUG] ------------end pdo mapping-----------\n");
 };
 
 uint32_t
 Slave_node_model::b_send_sdo_request(uint32_t idx, bool trans_type, void* val_buf, size_t size)
 {
   CO_ERR err = CO_ERR_NONE;
-  printf("[DEBUG] idx:0x%x, val:0x%x \n", idx, *(uint32_t*)val_buf);
+  uint32_t cobid = _csdo->TxId;
+  if (trans_type) {
+    cobid = _csdo->RxId;
+  }
+  printf("[DEBUG] cobid:0x%x, idx:0x%x, val:0x%08x, sz:%ld \n", cobid, idx, *(uint32_t*)val_buf, size);
   while ((err = this->nb_send_sdo_request(idx, trans_type, val_buf, size)) != CO_ERR_NONE) {
     /* code */
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -152,7 +172,7 @@ TS_AppCSdoCallback(CO_CSDO* csdo, uint16_t index, uint8_t sub, uint32_t code, vo
   // can refer to `COSdoGetObject` and `igh::ecrt_sdo_request_state, ec_sdo_request_t`
   // check COCSdoTransferFinalize for calling detail
 
-  printf("[DEBUG] sdo received response at index: 0x%04x, sub: 0x%02x, code: 0x%08x, state: ", index, sub, code);
+  printf("[DEBUG] sdo received response at index:0x%04x, sub:0x%02x, code:0x%08x, state: ", index, sub, code);
   Slave_node_model* self = (Slave_node_model*)parg;
 
   self->_last_csdo_abort_code = code;
@@ -181,7 +201,7 @@ TS_AppCSdoCallback(CO_CSDO* csdo, uint16_t index, uint8_t sub, uint32_t code, vo
       printf("Data cannot be transferred or stored to the application because of local control\n");
       break;
     default:
-      printf("general abort sdo request\n");
+      printf("general abort sdo request, 0x%x\n", code);
       break;
   }
 }
@@ -234,15 +254,41 @@ Master_node::Master_node(CO_NODE& master_node)
   this->slave_node_models.reserve(this->max_slave_num);
 };
 
+Master_node::~Master_node()
+{
+}
+
 void
 Master_node::bind_slave(Slave_node_model& slave_model)
 {
   this->slave_node_models.push_back(&slave_model);
-  size_t pos = this->slave_node_models.size() - 1;
-  slave_model._csdo = COCSdoFind(&master_node, pos);
-  if (slave_model._csdo == nullptr) {
-    throw std::runtime_error("[ERROR] SDO client is missing\n");
+
+  // linear search if server node id match
+  for (uint8_t pos = 0; pos < this->max_slave_num; pos++) {
+    CO_OBJ* obj = CODictFind(&master_node.Dict, CO_DEV(0x1280 + pos, 3));
+    if (!obj) {
+      throw std::runtime_error("[ERROR] SDO client is not in OD\n");
+    }
+
+    uint8_t server_node_id = 0;
+    CO_ERR err = COObjRdValue(obj, &master_node, (void*)(&server_node_id), sizeof(uint8_t));
+    if (err) {
+      throw std::runtime_error("[ERROR] OD creation wrong\n");
+    }
+    // printf("[DEBUG] server node id:%d\n", server_node_id);
+    if (server_node_id == slave_model.node_id) {
+      // printf("[DEBUG] SDO client found at pos:%d\n", pos);
+      // success find
+      slave_model._csdo = COCSdoFind(&master_node, pos);
+      if (slave_model._csdo == nullptr) {
+        break;
+      } else {
+        // success config
+        return;
+      }
+    }
   }
+  throw std::runtime_error("[ERROR] SDO client is missing\n");
 }
 
 void
@@ -252,16 +298,24 @@ Master_node::start_config()
   // so disable sync producer first, unless both PREOP and OP can be gurantee stable
   // Choosed no sync message during master PREOP.
 
-  uint32_t own_0x1005_val = 0x80; // @see CO_SYNC_COBID_ON
+  this->logic_state = CO_MASTER_IDLE;
+  uint32_t own_0x1005_val = ((uint32_t)0 << 30) | 0x80; // @see CO_SYNC_COBID_ON
   CODictWrBuffer(&master_node.Dict, CO_DEV(0x1005, 0), (uint8_t*)&own_0x1005_val, sizeof(own_0x1005_val));
 
   CONodeStart(&master_node);
+  CO_ERR err = CONodeGetErr(&master_node);
+  if (err != CO_ERR_NONE) {
+    printf("[DEBUG] co node start failed with code: %d\n", err);
+    exit(EXIT_FAILURE);
+  }
+
   this->config_commu_thread = std::thread([this]() {
     while (true) {
       // printf("[DEBUG] config coomu callback called\n");
       this->process();
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      if (this->logic_state == CO_MASTER_ACTIVE) {
+      if (this->logic_state != CO_MASTER_IDLE) {
+        // thread exit
         break;
       }
     }
@@ -308,7 +362,7 @@ Master_node::start_config_slaves()
 void
 Master_node::config_pdo_mappings(Slave_model_configs& configs)
 {
-  this->self_master_pdo_mapping();
+  // this->self_master_pdo_mapping(); //already mapped when OD create
   for (auto& slave : this->slave_node_models) {
     const auto& config = configs[slave->node_id];
     slave->config_pdo_mapping(config);
@@ -323,7 +377,10 @@ Master_node::activate()
 
   // enable sync producer
   uint32_t own_0x1005_val = CO_SYNC_COBID_ON | 0x80;
-  CODictWrBuffer(&master_node.Dict, CO_DEV(0x1005, 0), (uint8_t*)&own_0x1005_val, sizeof(own_0x1005_val));
+  CO_ERR err = CODictWrBuffer(&master_node.Dict, CO_DEV(0x1005, 0), (uint8_t*)&own_0x1005_val, sizeof(own_0x1005_val));
+  if (err != CO_ERR_NONE) {
+    throw std::runtime_error("[ERROR] write OD error");
+  }
 
   this->set_slaves_NMT_mode(CO_NMT_ENTER_OPERATIONAL);
   // check if all reach OP at ones own logic later
@@ -340,6 +397,8 @@ Master_node::process()
 }
 
 void
-Master_node::self_master_pdo_mapping()
+Master_node::release()
 {
+  this->logic_state = CO_MASTER_EXITING;
+  this->config_commu_thread.join();
 }

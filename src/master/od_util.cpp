@@ -51,9 +51,9 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
 
     od.push_back({ CO_KEY(0x1280 + nth_node, 0, CO_OBJ_D___R_), CO_TUNSIGNED8, (CO_DATA)(3) });
     // client -> server (tx)
-    od.push_back({ CO_KEY(0x1280 + nth_node, 1, CO_OBJ_D___RW), CO_TSDO_ID, (CO_DATA)(0x600) });
+    od.push_back({ CO_KEY(0x1280 + nth_node, 1, CO_OBJ_D___RW), CO_TSDO_ID, (CO_DATA)(0x600) }); // request cobid
     // rx
-    od.push_back({ CO_KEY(0x1280 + nth_node, 2, CO_OBJ_D___RW), CO_TSDO_ID, (CO_DATA)(0x580) });
+    od.push_back({ CO_KEY(0x1280 + nth_node, 2, CO_OBJ_D___RW), CO_TSDO_ID, (CO_DATA)(0x580) }); // response cobid
     od.push_back({ CO_KEY(0x1280 + nth_node, 3, CO_OBJ_D___RW), CO_TUNSIGNED8, (CO_DATA)(nodeId) });
   }
 

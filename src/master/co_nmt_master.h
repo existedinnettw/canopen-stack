@@ -34,12 +34,12 @@ extern "C"
    */
   typedef enum
   {
-    CO_NMT_NO_COMMAND = 0,              /**< 0, No command */
-    CO_NMT_ENTER_OPERATIONAL = 1,       /**< 1, Start device */
-    CO_NMT_ENTER_STOPPED = 2,           /**< 2, Stop device */
-    CO_NMT_ENTER_PRE_OPERATIONAL = 128, /**< 128, Put device into pre-operational */
-    CO_NMT_RESET_NODE = 129,            /**< 129, Reset device */
-    CO_NMT_RESET_COMMUNICATION = 130    /**< 130, Reset CANopen communication on device */
+    CO_NMT_NO_COMMAND = 0x00,            /**< 0, No command */
+    CO_NMT_ENTER_OPERATIONAL = 0x01,     /**< 1, Start device */
+    CO_NMT_ENTER_STOPPED = 0x02,         /**< 2, Stop device */
+    CO_NMT_ENTER_PRE_OPERATIONAL = 0x80, /**< 128, Put device into pre-operational */
+    CO_NMT_RESET_NODE = 0x81,            /**< 129, Reset device */
+    CO_NMT_RESET_COMMUNICATION = 0x82    /**< 130, Reset CANopen communication on device */
   } CO_NMT_command_t;
 
   /******************************************************************************

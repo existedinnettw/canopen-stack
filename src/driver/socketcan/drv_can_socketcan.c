@@ -106,7 +106,7 @@ static void DrvCanInit(const CO_IF_CAN_DRV *super)
         close(self->CanSocket);
         exit(EXIT_FAILURE);
     }
-    struct timeval tvTx = {0, 100000}; // 100ms
+    struct timeval tvTx = {0, 10000}; // 10ms
     if (setsockopt(self->CanSocket, SOL_SOCKET, SO_SNDTIMEO, &tvTx, sizeof(tvTx)) < 0)
     {
         perror("Setting send timeout failed");

@@ -27,37 +27,68 @@ Slave_node_model::set_NMT_mode(CO_NMT_command_t cmd)
     case HEARTBEAT: {
       break;
     }
-    case RXPDO_TIMEOUT: {
+    case BYPASS: {
       // assume success
-      this->_RXPDO_TIMEOUT_fake_nmt_mode = CO_NMT_command_t_to_CO_MODE(cmd);
+      this->_BYPASS_fake_nmt_mode = CO_NMT_command_t_to_CO_MODE(cmd);
       break;
     }
   }
 };
 
+/**
+ * @todo RXPDO_TIMEOUT
+ *  with PDO_data_map may necessary
+ */
+void
+Slave_node_model::config_nmt_monitor()
+{
+  switch (monitor_method) {
+    case HEARTBEAT: {
+      // enable hb producer at 0x1017
+      uint16_t Producer_heartbeat_time = 20; // 20ms
+      uint32_t abort_code =
+        this->b_send_sdo_request(0x101700, 0, &Producer_heartbeat_time, sizeof(Producer_heartbeat_time));
+
+      // consumer of master_node, already set to 50ms during od create
+      // uint32_t val = node_id<<16+50
+      // CODictWrBuffer
+
+      break;
+    }
+    case BYPASS: {
+      // ~~already config rxpdo deadline monitor during od create~~
+
+      // 7.5.2.35 Object 1400h to 15FFh: RPDO communication parameter
+      // sub idx 5, deadline monitoring
+      // uint16_t event_timer = 50; // ms
+      // CODictWrBuffer(&master_node.Dict, CO_DEV(0x1400, 5), (uint8_t*)&event_timer, sizeof(event_timer));
+
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
 CO_MODE
 Slave_node_model::get_NMT_state()
 {
   switch (monitor_method) {
+    /**
+     * try to combine `CONmtGetHbEvents` and `CONmtLastHbState`
+     * @see CONmtLastHbState It use linear search, which may not fast enough.
+     * @see CONmtGetHbEvents
+     */
     case HEARTBEAT: {
-      // search, if HbCons in treemap, code will much cleaner
-      // @todo cache by pointer?
-      CO_HBCONS* hbc = master_node.Nmt.HbCons;
-      if (hbc == nullptr) {
-        // return
+      if (this->_hbc->Event) {
+        this->_hbc->Event = 0;
+        return CO_INVALID;
       }
-      while (hbc != 0) {
-        if (hbc->NodeId != node_id) {
-          hbc = hbc->Next;
-        } else {
-          // hbc->NodeId == node_id
-          return hbc->State;
-          // may better use get_mode()
-        }
-      } // end of while
+      return this->_hbc->State;
     }
-    case RXPDO_TIMEOUT: {
-      return this->_RXPDO_TIMEOUT_fake_nmt_mode;
+    case BYPASS: {
+      return this->_BYPASS_fake_nmt_mode;
     }
   } // end of switch
 
@@ -92,6 +123,12 @@ Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
         abort_code = this->b_send_sdo_request(
           ((0x1800 + pdoId - 0x1A00) << 8) + 0x01, 0, &cobid_used_by_tpdo, sizeof(cobid_used_by_tpdo));
         continue;
+      } else {
+        // enable
+        uint32_t cobid_used_by_tpdo =
+          CO_COBID_TPDO_STD(1u, CO_COBID_TPDO_BASE + ((pdoId - 0x1A00) * CO_COBID_TPDO_INC)) + node_id;
+        abort_code = this->b_send_sdo_request(
+          ((0x1800 + pdoId - 0x1A00) << 8) + 0x01, 0, &cobid_used_by_tpdo, sizeof(cobid_used_by_tpdo));
       }
 
       // have mapping
@@ -251,7 +288,6 @@ Master_node::Master_node(CO_NODE& master_node)
       throw std::runtime_error("Exceed support num of slave nodes of underline canopen-stack.");
     }
   };
-  this->slave_node_models.reserve(this->max_slave_num);
 };
 
 Master_node::~Master_node()
@@ -261,7 +297,10 @@ Master_node::~Master_node()
 void
 Master_node::bind_slave(Slave_node_model& slave_model)
 {
-  this->slave_node_models.push_back(&slave_model);
+  if (this->slave_node_models[slave_model.node_id]) {
+    throw std::runtime_error("Slave node id already exist.");
+  }
+  this->slave_node_models[slave_model.node_id] = &slave_model;
 
   // linear search if server node id match
   for (uint8_t pos = 0; pos < this->max_slave_num; pos++) {
@@ -281,14 +320,49 @@ Master_node::bind_slave(Slave_node_model& slave_model)
       // success find
       slave_model._csdo = COCSdoFind(&master_node, pos);
       if (slave_model._csdo == nullptr) {
-        break;
+        throw std::runtime_error("[ERROR] SDO client is missing\n");
       } else {
         // success config
-        return;
+        break;
       }
     }
   }
-  throw std::runtime_error("[ERROR] SDO client is missing\n");
+  if (slave_model._csdo == nullptr) {
+    throw std::runtime_error("[ERROR] SDO client is missing\n");
+  }
+
+
+  // heartbeat
+  if (slave_model.monitor_method == HEARTBEAT) {
+
+    // search, if HbCons in treemap, code will much cleaner
+    // @todo cache by pointer?
+    CO_HBCONS* hbc = master_node.Nmt.HbCons;
+    if (hbc == nullptr) {
+      // return
+    }
+    while (hbc != 0) {
+      if (hbc->NodeId != slave_model.node_id) {
+        hbc = hbc->Next;
+      } else {
+        // hbc->NodeId == node_id
+        // return hbc->State;
+        slave_model._hbc = hbc;
+        break;
+      }
+    } // end of while
+    if (hbc == 0) {
+      throw std::runtime_error("[ERROR] can't find target heartbeat consumer\n");
+    }
+  } // end of hb
+
+  return;
+}
+
+Slave_node_model&
+Master_node::get_slave(uint8_t node_id)
+{
+  return *slave_node_models[node_id];
 }
 
 void
@@ -326,7 +400,8 @@ void
 Master_node::set_slaves_NMT_mode(CO_NMT_command_t cmd)
 {
   CO_NMT_sendCommand(&master_node, cmd, master_node.NodeId);
-  for (auto& slave : this->slave_node_models) {
+  for (auto slave_pair : this->slave_node_models) {
+    auto& slave = slave_pair.second;
     slave->set_NMT_mode(cmd);
   }
 }
@@ -341,10 +416,27 @@ Master_node::start_config_slaves()
   this->set_slaves_NMT_mode(CO_NMT_ENTER_PRE_OPERATIONAL);
 
   // wait all preop
+  // if heartbeat producer not config through SDO, we have no method to check if slave is preop since SDO work only
+  // after PREOP.
+  // so, assume all reach PREOP first
+}
+
+void
+Master_node::config_nmt_monitors()
+{
+  for (auto slave_pair : this->slave_node_models) {
+    auto& slave = slave_pair.second;
+    slave->config_nmt_monitor();
+  }
+  // master hb consumer set 2.5x slave 0x101700 (usually 20ms), --> 50ms
+
+
+  // check all reach PREOP
   while (true) {
     CO_MODE state;
     bool all_preop = true;
-    for (auto& slave : this->slave_node_models) {
+    for (auto slave_pair : this->slave_node_models) {
+      auto& slave = slave_pair.second;
       state = slave->get_NMT_state();
       if (state != CO_PREOP) {
         all_preop = false;
@@ -363,15 +455,18 @@ void
 Master_node::config_pdo_mappings(Slave_model_configs& configs)
 {
   // this->self_master_pdo_mapping(); //already mapped when OD create
-  for (auto& slave : this->slave_node_models) {
+  for (auto slave_pair : this->slave_node_models) {
+    auto& slave = slave_pair.second;
     const auto& config = configs[slave->node_id];
     slave->config_pdo_mapping(config);
   }
 }
 
 void
-Master_node::activate()
+Master_node::activate(uint32_t cycle_time_us)
 {
+  CODictWrBuffer(&master_node.Dict, CO_DEV(0x1006, 0), (uint8_t*)&cycle_time_us, sizeof(cycle_time_us));
+
   this->logic_state = CO_MASTER_ACTIVE;
   this->config_commu_thread.join();
 
@@ -401,4 +496,5 @@ Master_node::release()
 {
   this->logic_state = CO_MASTER_EXITING;
   this->config_commu_thread.join();
+  this->set_slaves_NMT_mode(CO_NMT_ENTER_STOPPED);
 }

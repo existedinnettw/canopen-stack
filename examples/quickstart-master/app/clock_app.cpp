@@ -54,6 +54,7 @@ using std::sig_atomic_t;
 
 /* Allocate a global CANopen node object */
 static CO_NODE master_node;
+Master_node *master_ptr;
 static volatile sig_atomic_t keep_running = 1;
 
 /******************************************************************************
@@ -66,12 +67,6 @@ PDO_data_map pdo_data_map;
 static void AppClock(void *p_arg)
 {
     CO_NODE *node;
-    CO_OBJ *od_sec;
-    CO_OBJ *od_min;
-    CO_OBJ *od_hr;
-    uint8_t second;
-    uint8_t minute;
-    uint32_t hour;
 
     /* For flexible usage (not needed, but nice to show), we use the argument
      * as reference to the CANopen node object. If no node is given, we ignore
@@ -92,7 +87,7 @@ static void AppClock(void *p_arg)
     }
 
     // printf("\n");
-    // print_od(node->Dict.Root, 0x2000);
+    print_od(node->Dict.Root, 0x1000, 0x2000);
     printf("---\n");
     print_data_map(pdo_data_map);
     // printf("status wd: 0x%x\n", *(uint16_t *)(pdo_data_map[std::make_tuple(2, 0x604100)]));
@@ -138,6 +133,7 @@ void *rt_cb(void *args)
     clock_gettime(CLOCK_MONOTONIC, &wakeup_time);
     wakeup_time = timespec_add(wakeup_time, (struct timespec){.tv_sec = 0, .tv_nsec = tv_nsec});
 
+    uint16_t tick = 0;
     while (keep_running)
     {
         if (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &wakeup_time, NULL))
@@ -151,8 +147,16 @@ void *rt_cb(void *args)
             COTmrService(&Node->Tmr);
             COTmrProcess(&master_node.Tmr);
             CONodeProcess(&master_node);
-            // user app logic following
+            {
+                // user app logic following
+                if (tick >= 500)
+                {
+                    printf("node 3 hb mode2: %d\n", master_ptr->get_slave(3).get_NMT_state());
 
+                    tick = 0; // reset
+                }
+                tick++;
+            }
             // sleep until next tick
         }
         wakeup_time = timespec_add(wakeup_time, (struct timespec){.tv_sec = 0, .tv_nsec = tv_nsec});
@@ -188,6 +192,10 @@ Slave_model_configs slaveConfigs = {
         {
             {0x1600, {{std::make_tuple(0x604000, 2), std::make_tuple(0x604200, 2)}}},
             {0x1A00, {{std::make_tuple(0x604100, 2), std::make_tuple(0x606C00, 4)}}},
+            {0x1A01, {{std::make_tuple(0x60FD00, 4), std::make_tuple(0x606400, 4)}}},
+            // {0x1A01, {}}, // disable only
+            {0x1A02, {}},
+            {0x1A03, {}},
         },
     },
     {
@@ -195,8 +203,8 @@ Slave_model_configs slaveConfigs = {
         {
             {0x1600, {{std::make_tuple(0x604000, 2), std::make_tuple(0x604200, 2)}}},
             {0x1A00, {{std::make_tuple(0x604100, 2), std::make_tuple(0x606C00, 4)}}},
-            // {0x1A01, {{std::make_tuple(0x60FD00, 4), std::make_tuple(0x606400, 4)}}},
-            {0x1A01, {}}, // disable only
+            {0x1A01, {{std::make_tuple(0x60FD00, 4), std::make_tuple(0x606400, 4)}}},
+            // {0x1A01, {}}, // disable only
             {0x1A02, {}},
             {0x1A03, {}},
         },
@@ -268,20 +276,23 @@ int main(void)
 
     print_od(master_node.Dict.Root);
 
-    auto master = Master_node(master_node);
+    Master_node master = Master_node(master_node);
+    master_ptr = &master;
+    master.set_slaves_NMT_mode(CO_NMT_RESET_NODE);
     master.start_config();
 
-    auto slave_mot1 = Slave_node_model(0x02, master_node, RXPDO_TIMEOUT);
-    auto slave_mot2 = Slave_node_model(0x03, master_node, RXPDO_TIMEOUT); // HEARTBEAT
+    auto slave_mot1 = Slave_node_model(0x02, master_node, BYPASS);
+    auto slave_mot2 = Slave_node_model(0x03, master_node, HEARTBEAT); // HEARTBEAT
 
     master.bind_slave(slave_mot1); // todo: may need mapping
     master.bind_slave(slave_mot2);
     master.start_config_slaves();
 
+    master.config_nmt_monitors();
     master.config_pdo_mappings(slaveConfigs);
     // exit(EXIT_SUCCESS);
 
-    master.activate();
+    master.activate(1000);
 
     pthread_t thread;
     pthread_attr_t attr;

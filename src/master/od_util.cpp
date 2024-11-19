@@ -4,10 +4,13 @@
 #include <cassert>
 #include <iostream>
 
+/**
+ */
 std::vector<CO_OBJ>
 create_default_od()
 {
-  return {
+  std::vector<CO_OBJ> ret_od;
+  ret_od = {
     { CO_KEY(0x1000, 0, CO_OBJ_D___R_),
       CO_TUNSIGNED32,
       (CO_DATA)(0x00000000) },                                            // device type, 0-->not standard profile
@@ -33,16 +36,45 @@ create_default_od()
     // self txpdo, later
     // user entries, later
   };
+
+  // std::sort(ret_od.begin(), ret_od.end(), [](CO_OBJ a, CO_OBJ b) { return a.Key < b.Key; });
+
+  return ret_od;
 }
 
 /**
- * @todo return pointer of pdo data, return slave entry to pointer of pdo data?
- *
+ * @todo delete CO_HBCONS memory
+ * @todo CO_TPDO_NUM for 0x160000 or 0x1A0000
+ * @todo CO_TPDO_MAP for 0x160001 or 0x1A0001
+ * @todo CO_TPDO_TYPE for 0x140002 or 0x180002
+ * @todo CO_RPDO_EVENT implement, CO_TPDO_EVENT isn't work with RPDO
+ * @see https://canopen-stack.org/v4.4/usage/configuration/?query=deadline#transmit-pdo-communication
  */
 Imd_PDO_data_map
 config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& configs)
 {
   Imd_PDO_data_map ret_imd_pdo_data_map;
+
+  /**
+   * 0x1016 heartbeat consumer
+   * @see void test_init_multiple(void), TS_HBCons_MultiConsumer
+   */
+  od.push_back({ CO_KEY(0x1016, 0, CO_OBJ_D___RW), CO_THB_CONS, (CO_DATA)(configs.size()) });
+  for (auto it = configs.begin(); it != configs.end(); ++it) {
+    size_t nth_node = std::distance(configs.begin(), it) + 1;
+    uint8_t nodeId = it->first;
+    // not support direct memory
+    CO_HBCONS* hbc_data_ptr = new CO_HBCONS{
+      .Time = 50, // 50ms
+      .NodeId = nodeId,
+    };
+    // create hb consumer for each slave,
+    // Monitoring of the heartbeat producer shall start after the reception of the first heartbeat.
+    // Therefore non trigger is acceptable
+    od.push_back({ CO_KEY(0x1016, nth_node, CO_OBJ_____RW),
+                   CO_THB_CONS,
+                   (CO_DATA)(hbc_data_ptr) }); // 0ms --> not enable yet, 50ms is default hb time
+  }
 
   // SDO client parameter
   for (auto it = configs.begin(); it != configs.end(); ++it) {
@@ -73,11 +105,14 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
       if (pdoId >= 0x1A00) {
         // txpdo of slave --> rxpdo of master
         printf("is_rpdo");
+        if (pdo_it->second.size() == 0) {
+          break;
+        }
 
         // RPDO communication parameter
         od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 0, CO_OBJ_D___R_),
                        CO_TUNSIGNED8,
-                       (CO_DATA)(2) }); // highest sub-index supported
+                       (CO_DATA)(02) }); // highest sub-index supported
         od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 1, CO_OBJ_D___RW),
                        CO_TPDO_ID,
                        (CO_DATA)(CO_COBID_RPDO_STD(1u, CO_COBID_TPDO_BASE + ((pdoId - 0x1A00) * CO_COBID_RPDO_INC)) +
@@ -85,9 +120,18 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
         od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 2, CO_OBJ_D___RW),
                        CO_TUNSIGNED8,
                        (CO_DATA)(0x00) }); // transmission type, 0x00-->synchronous
-                                           // inhibit time
-                                           // compatibility entry
-                                           // event-timer
+
+        // canopen-stack not yet implement
+        // od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 3, CO_OBJ_D___RW),
+        //                CO_TUNSIGNED16,
+        //                (CO_DATA)(0x00) }); // inhibit time, 0-->disable
+        // od.push_back(
+        //   { CO_KEY(0x1400 + nth_rpdo_map, 4, CO_OBJ_D___RW), CO_TUNSIGNED8, (CO_DATA)(0x00) }); // compatibility
+        //   entry
+        // od.push_back({ CO_KEY(0x1400 + nth_rpdo_map, 5, CO_OBJ_D___RW),
+        //                CO_TUNSIGNED16,
+        //                (CO_DATA)(50) }); // event-timer, ms, 0->disable
+        // sync start value
 
 
         od.push_back({ CO_KEY(0x1600 + nth_rpdo_map, 0, CO_OBJ_D___R_),
@@ -126,6 +170,9 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
       else {
         // rxpdo of slave --> txpdo of master
         printf("is_tpdo");
+        if (pdo_it->second.size() == 0) {
+          break;
+        }
 
         // RPDO communication parameter
         od.push_back({ CO_KEY(0x1800 + nth_tpdo_map, 0, CO_OBJ_D___R_),
@@ -206,14 +253,14 @@ get_PDO_data_map(std::vector<CO_OBJ>& od, const Imd_PDO_data_map& imd_pdo_data_m
 }
 
 void
-print_od(CO_OBJ_T* OD, uint16_t after_p_idx)
+print_od(CO_OBJ_T* OD, uint16_t after_p_idx, uint16_t before_p_idx)
 {
   for (uint32_t i = 0; i < 0xFFFFFF; i++)
   // CO_OBJ_T *OD = od.data();
   // for (int i = 0; i < od.size(); i++)
   {
     uint16_t p_idx = OD[i].Key >> 16;
-    if (p_idx == 0) {
+    if (p_idx == 0 || p_idx >= before_p_idx) {
       // touch CO_OBJ_DICT_ENDMARK
       break;
     }
@@ -234,6 +281,6 @@ print_data_map(const PDO_data_map& pdo_data_map)
     // printf("pdo_idx:0x%x data:%p \n", pdo_idx, pdo_data);
     auto node_id = std::get<0>(node_idx_tup);
     auto pdo_idx = std::get<1>(node_idx_tup);
-    printf("node_id:%d, pdo_idx:0x%x, data:0x%04x, data_ptr:%p \n", node_id, pdo_idx, *(uint32_t*)pdo_data, pdo_data);
+    printf("node_id:%d, pdo_idx:0x%x, data:0x%08x, data_ptr:%p \n", node_id, pdo_idx, *(uint32_t*)pdo_data, pdo_data);
   }
 }

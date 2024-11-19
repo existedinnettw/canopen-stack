@@ -46,7 +46,7 @@ Slave_node_model::config_nmt_monitor()
     case HEARTBEAT: {
       // enable hb producer at 0x1017
       uint16_t Producer_heartbeat_time = 20; // 20ms
-      uint32_t abort_code =
+      [[maybe_unused]] uint32_t abort_code =
         this->b_send_sdo_request(0x101700, 0, &Producer_heartbeat_time, sizeof(Producer_heartbeat_time));
 
       // consumer of master_node, already set to 50ms during od create
@@ -98,7 +98,7 @@ Slave_node_model::get_NMT_state()
 void
 Slave_node_model::config_pdo_mapping(const Slave_model_config& config)
 {
-  uint32_t abort_code = 0;
+  [[maybe_unused]] uint32_t abort_code = 0;
   printf("[DEBUG] start pdo mapping for node:%d\n", this->node_id);
   for (auto pdo_it = config.begin(); pdo_it != config.end(); ++pdo_it) {
     int pdoId = pdo_it->first;

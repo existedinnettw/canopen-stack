@@ -1,7 +1,7 @@
 #include "co_size_only.h"
 #include "assert.h"
 
-CO_OBJ_TYPE* const
+CO_OBJ_TYPE*
 size_to_obj_type(uint8_t size)
 {
   switch (size) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "co_core.h"
+#include "co_nmt_master.h"
 
 #include <map>
 #include <od_util.hpp>

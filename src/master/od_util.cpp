@@ -92,7 +92,7 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
   size_t nth_rpdo_map = 0;
   size_t nth_tpdo_map = 0;
   for (auto node_it = configs.begin(); node_it != configs.end(); ++node_it) {
-    size_t nth_node = std::distance(configs.begin(), node_it);
+    [[maybe_unused]] size_t nth_node = std::distance(configs.begin(), node_it);
     int nodeId = node_it->first;
     uint8_t nth_mapped_memory = 1;
 
@@ -267,7 +267,7 @@ print_od(CO_OBJ_T* OD, uint16_t after_p_idx, uint16_t before_p_idx)
     if (p_idx < after_p_idx)
       continue;
     uint8_t sub_idx = (OD[i].Key >> 8) & 0xFF;
-    auto type = OD[i].Type;
+    [[maybe_unused]] auto type = OD[i].Type;
 
     // printf("key:0x%x \n", OD[i].Key);
     printf("p_idx:0x%x sub_idx:0x%x data:0x%lx \n", p_idx, sub_idx, OD[i].Data);

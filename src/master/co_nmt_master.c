@@ -39,7 +39,7 @@ CO_NMT_command_t_to_CO_MODE(CO_NMT_command_t command)
     case CO_NMT_ENTER_STOPPED:
       return CO_STOP;
     default:
-      return CO_NMT_NO_COMMAND;
+      return CO_INVALID;
   }
 }
 
@@ -83,6 +83,7 @@ CO_NMT_sendCommand(CO_NODE* node, CO_NMT_command_t command, uint8_t nodeID)
   if (nodeID == 0U) {
     // send to self node too
     size_t len = lwrb_write(&node->Rxed_q, &frm, sizeof(frm));
+    (void)len;
   }
 
   return CO_ERR_NONE;

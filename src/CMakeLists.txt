@@ -117,4 +117,6 @@ target_compile_options(canopen-stack-master PRIVATE "-std=c++17")
 target_link_libraries(canopen-stack-master PUBLIC canopen-stack)
 target_include_directories(canopen-stack-master PUBLIC master)
 
-add_subdirectory(master/tests)
+if(NOT BUILD_TESTING STREQUAL OFF)
+  add_subdirectory(master/tests)
+endif()

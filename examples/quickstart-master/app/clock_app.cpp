@@ -90,7 +90,7 @@ static void AppClock(void *p_arg)
     print_od(node->Dict.Root, 0x1000, 0x2000);
     printf("---\n");
     print_data_map(pdo_data_map);
-    // printf("status wd: 0x%x\n", *(uint16_t *)(pdo_data_map[std::make_tuple(2, 0x604100)]));
+    // printf("status wd: 0x%x\n", *(uint16_t *)(pdo_data_map[2][0x604100]));
     // CO_ERR err = CONodeGetErr(&master_node);
     // if (err != CO_ERR_NONE)
     // {

@@ -157,7 +157,7 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
           od.push_back({ CO_KEY(0x2000 + nodeId, nth_mapped_memory, CO_OBJ_D___RW),
                          size_to_obj_type(size_in_byte),
                          (CO_DATA)(0) });
-          ret_imd_pdo_data_map[std::make_tuple(nodeId, entryId)] = CO_DEV(0x2000 + nodeId, nth_mapped_memory) >> 8;
+          ret_imd_pdo_data_map[nodeId][entryId] = CO_DEV(0x2000 + nodeId, nth_mapped_memory) >> 8;
           nth_mapped_memory++;
           /**
            * @todo create relevant object at 0x20xx for mapping
@@ -214,7 +214,7 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
           od.push_back({ CO_KEY(0x2000 + nodeId, nth_mapped_memory, CO_OBJ_D___RW),
                          size_to_obj_type(size_in_byte),
                          (CO_DATA)(0) });
-          ret_imd_pdo_data_map[std::make_tuple(nodeId, entryId)] = CO_DEV(0x2000 + nodeId, nth_mapped_memory) >> 8;
+          ret_imd_pdo_data_map[nodeId][entryId] = CO_DEV(0x2000 + nodeId, nth_mapped_memory) >> 8;
           nth_mapped_memory++;
           /**
            * @todo create relevant object at 0x20xx for mapping
@@ -242,13 +242,16 @@ get_PDO_data_map(std::vector<CO_OBJ>& od, const Imd_PDO_data_map& imd_pdo_data_m
 {
   PDO_data_map ret_pdo_data_map;
   for (auto node_pdo_it = imd_pdo_data_map.begin(); node_pdo_it != imd_pdo_data_map.end(); ++node_pdo_it) {
-    uint8_t node_id = std::get<0>(node_pdo_it->first);
-    uint32_t pdo_idx = std::get<1>(node_pdo_it->first);
-    uint32_t local_od_idx = node_pdo_it->second;
-    std::vector<CO_OBJ>::iterator it = std::lower_bound(
-      od.begin(), od.end(), local_od_idx, [](const CO_OBJ& obj, uint32_t idx) { return (obj.Key >> 8) < idx; });
-    ret_pdo_data_map[std::make_tuple(node_id, pdo_idx)] = (void*)(&it->Data);
-  } // end of node iterate
+    auto node_id = node_pdo_it->first;
+    auto per_pdo_map = node_pdo_it->second;
+    for (const auto& each_pdo_map : per_pdo_map) {
+      auto pdo_idx = each_pdo_map.first;
+      auto local_od_idx = each_pdo_map.second;
+      std::vector<CO_OBJ>::iterator it = std::lower_bound(
+        od.begin(), od.end(), local_od_idx, [](const CO_OBJ& obj, uint32_t idx) { return (obj.Key >> 8) < idx; });
+      ret_pdo_data_map[node_id][pdo_idx] = (void*)(&it->Data);
+    } // end of node iterate
+  }
   return ret_pdo_data_map;
 }
 
@@ -277,10 +280,13 @@ print_od(CO_OBJ_T* OD, uint16_t after_p_idx, uint16_t before_p_idx)
 void
 print_data_map(const PDO_data_map& pdo_data_map)
 {
-  for (auto& [node_idx_tup, pdo_data] : pdo_data_map) {
-    // printf("pdo_idx:0x%x data:%p \n", pdo_idx, pdo_data);
-    auto node_id = std::get<0>(node_idx_tup);
-    auto pdo_idx = std::get<1>(node_idx_tup);
-    printf("node_id:%d, pdo_idx:0x%x, data:0x%08x, data_ptr:%p \n", node_id, pdo_idx, *(uint32_t*)pdo_data, pdo_data);
+  for (const auto& each_node : pdo_data_map) {
+    auto node_id = each_node.first;
+    auto per_pdo_map = each_node.second;
+    for (const auto& each_pdo_map : per_pdo_map) {
+      auto pdo_idx = each_pdo_map.first;
+      auto pdo_data = each_pdo_map.second;
+      printf("node_id:%d, pdo_idx:0x%x, data:0x%08x, data_ptr:%p \n", node_id, pdo_idx, *(uint32_t*)pdo_data, pdo_data);
+    }
   }
 }

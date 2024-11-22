@@ -41,8 +41,8 @@ extern "C"
      * COLnxSktCanInit(&Linux_Socketcan_CanDriver)
      * ```
      */
-    typedef struct CO_LNX_SKTCAN_T
-    {
+    typedef struct CO_LNX_SKTCAN_T CO_LNX_SKTCAN;
+    struct CO_LNX_SKTCAN_T{
         /**
          * @public
          */
@@ -52,7 +52,7 @@ extern "C"
          */
         char CanInterfaceName[32];
         int CanSocket;
-    } CO_LNX_SKTCAN;
+    };
 
     /**
      * ctor of CO_LNX_SKTCAN

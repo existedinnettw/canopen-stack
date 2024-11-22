@@ -99,12 +99,12 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
     for (auto pdo_it = node_it->second.begin(); pdo_it != node_it->second.end(); ++pdo_it) {
       // need to map based on iterate
       uint16_t pdoId = pdo_it->first;
-      printf("[DEBUG] pdo_id: %x, ", pdoId);
+      // printf("[DEBUG] pdo_id: %x, ", pdoId);
       assert((pdoId >= 0x1600 && pdoId <= 0x17FF) || (pdoId >= 0x1A00 && pdoId <= 0x1BFF));
 
       if (pdoId >= 0x1A00) {
         // txpdo of slave --> rxpdo of master
-        printf("is_rpdo");
+        // printf("is_rpdo");
         if (pdo_it->second.size() == 0) {
           break;
         }
@@ -169,7 +169,7 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
 
       else {
         // rxpdo of slave --> txpdo of master
-        printf("is_tpdo");
+        // printf("is_tpdo");
         if (pdo_it->second.size() == 0) {
           break;
         }
@@ -225,7 +225,7 @@ config_od_through_configs(std::vector<CO_OBJ>& od, const Slave_model_configs& co
       } // end of tpdo iterate
 
 
-      printf("\n");
+      // printf("\n");
     } // end of pdo iterate
     od.push_back({ CO_KEY(0x2000 + nodeId, 0x00, CO_OBJ_D___RW),
                    CO_TUNSIGNED8,

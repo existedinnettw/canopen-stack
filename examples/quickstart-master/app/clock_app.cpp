@@ -27,7 +27,7 @@
 
 #include "drv_can_socketcan.h"
 #include "drv_timer_swcycle.h" /* Timer driver                */
-#include "drv_nvm_sim.h"       /* NVM driver                  */
+#include "drv_nvm_mmap.h"      /* NVM driver                  */
 
 #define _OPEN_THREADS
 #include <pthread.h> //posix
@@ -47,6 +47,7 @@ using std::sig_atomic_t;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <filesystem>
 
 /******************************************************************************
  * PRIVATE VARIABLES
@@ -245,10 +246,14 @@ int main(void)
     CO_LNX_SKTCAN Linux_Socketcan_CanDriver;
     COLnxSktCanInit(&Linux_Socketcan_CanDriver, "can0");
 
+    CO_NVM_MMAP mmap_nvm_driver{.nvm_sim_size = 128};
+    std::filesystem::path nvm_fs_path = std::filesystem::current_path() / "canopen_nvm.bin";
+    CONvmMmapInit(&mmap_nvm_driver, nvm_fs_path.c_str());
+
     static struct CO_IF_DRV_T AppDriver = {
         &Linux_Socketcan_CanDriver.super,
         &SwCycleTimerDriver,
-        &SimNvmDriver};
+        &mmap_nvm_driver.super};
 
     struct CO_NODE_SPEC_T AppSpec = {
         APP_NODE_ID,                      /* default Node-Id                */

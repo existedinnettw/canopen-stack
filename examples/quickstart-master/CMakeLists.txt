@@ -8,10 +8,8 @@ target_compile_options(canopen-stack-master PRIVATE "-std=c++17")
 target_sources(
   demo-quickstart-master
   PRIVATE # application
-          app/clock_app.cpp
-          # driver
-          driver/drv_nvm_sim.c)
-target_include_directories(demo-quickstart-master PRIVATE app driver)
+          app/clock_app.cpp)
+target_include_directories(demo-quickstart-master PRIVATE app)
 
 # --- specify the dependencies for this application
 #

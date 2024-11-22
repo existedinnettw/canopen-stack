@@ -209,7 +209,7 @@ TS_AppCSdoCallback(CO_CSDO* csdo, uint16_t index, uint8_t sub, uint32_t code, vo
   // can refer to `COSdoGetObject` and `igh::ecrt_sdo_request_state, ec_sdo_request_t`
   // check COCSdoTransferFinalize for calling detail
 
-  printf("[DEBUG] sdo received response at index:0x%04x, sub:0x%02x, code:0x%08x, state: ", index, sub, code);
+  // printf("[DEBUG] sdo received response at index:0x%04x, sub:0x%02x, code:0x%08x, state: ", index, sub, code);
   Slave_node_model* self = (Slave_node_model*)parg;
 
   self->_last_csdo_abort_code = code;

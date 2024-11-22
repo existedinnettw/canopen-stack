@@ -479,6 +479,7 @@ Master_node::activate(uint32_t cycle_time_us)
 
   this->set_slaves_NMT_mode(CO_NMT_ENTER_OPERATIONAL);
   // check if all reach OP at ones own logic later
+  printf("[DEBUG] master activated\n");
 }
 
 void

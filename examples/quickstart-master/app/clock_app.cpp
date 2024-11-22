@@ -24,6 +24,7 @@
 // #include "object/cia301.h"
 #include "co_nmt_master.h"
 #include "co_master.hpp"
+#include "sche_util.hpp"
 
 #include "drv_can_socketcan.h"
 #include "drv_timer_swcycle.h" /* Timer driver                */
@@ -119,6 +120,7 @@ timespec_add(struct timespec time1, struct timespec time2)
     return result;
 }
 
+Sche_high_water_mark time_mark;
 /**
  * @brief
  * simulation of realtime callback.
@@ -135,6 +137,7 @@ void *rt_cb(void *args)
     wakeup_time = timespec_add(wakeup_time, (struct timespec){.tv_sec = 0, .tv_nsec = tv_nsec});
 
     uint16_t tick = 0;
+    struct timespec start, end;
     while (keep_running)
     {
         if (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &wakeup_time, NULL))
@@ -142,10 +145,13 @@ void *rt_cb(void *args)
             printf("rt thread exit\n");
             pthread_exit((void *)EXIT_FAILURE);
         }
+        clock_gettime(CLOCK_MONOTONIC, &start);
         {
             // following is 1ms callback
             CONodeProcess(&master_node);
             COTmrService(&Node->Tmr);
+            time_mark.wait_unitl_mark(start);
+
             COTmrProcess(&master_node.Tmr);
             CONodeProcess(&master_node);
             {
@@ -160,6 +166,10 @@ void *rt_cb(void *args)
             }
             // sleep until next tick
         }
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+        // printf("[DEBUG] time req: %.9f us\n", elapsed * 1e6); // Convert to microseconds
+
         wakeup_time = timespec_add(wakeup_time, (struct timespec){.tv_sec = 0, .tv_nsec = tv_nsec});
     }
     printf("\nrt thread exit success\n");

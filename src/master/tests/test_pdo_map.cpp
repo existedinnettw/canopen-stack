@@ -50,10 +50,10 @@ TEST_F(OD_test, od_creat_test)
   CO_OBJ_T* OD = od.data();
   print_od(od.data());
 
-  *(uint16_t*)(pdo_data_map[std::make_tuple(2, 0x607A00)]) = 5;
+  *(uint16_t*)(pdo_data_map[2][0x607A00]) = 5;
   printf("---\ndata map:\n");
   print_data_map(pdo_data_map);
-  ASSERT_EQ(*(uint16_t*)(pdo_data_map[std::make_tuple(2, 0x607A00)]), 5);
+  ASSERT_EQ(*(uint16_t*)(pdo_data_map[2][0x607A00]), 5);
 }
 
 

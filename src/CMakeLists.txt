@@ -201,9 +201,10 @@ target_include_directories(
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/master>)
 set_target_properties(
     canopen-stack-master
-    PROPERTIES PUBLIC_HEADER "${CMAKE_CURRENT_LIST_DIR}/master/od_util.hpp;
-               \ ${CMAKE_CURRENT_LIST_DIR}/master/co_master.hpp;
-               \ ${CMAKE_CURRENT_LIST_DIR}/master/sche_util.hpp;")
+    PROPERTIES PUBLIC_HEADER "${CMAKE_CURRENT_LIST_DIR}/master/od_util.hpp;\
+${CMAKE_CURRENT_LIST_DIR}/master/co_master.hpp;\
+${CMAKE_CURRENT_LIST_DIR}/master/sche_util.hpp;")
+
 install(TARGETS canopen-stack-master EXPORT canopen-stack-master-Config)
 install(
     EXPORT canopen-stack-master-Config

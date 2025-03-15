@@ -43,6 +43,8 @@ class canopen_stackRecipe(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
+        tc.variables["BUILD_TESTING"] = False
+        tc.variables["BUILD_EXAMPLES"] = False
         tc.generate()
 
     def build(self):
@@ -55,4 +57,4 @@ class canopen_stackRecipe(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = ["canopen-stack"]
+        self.cpp_info.libs = ["lwrb", "canopen-stack", "canopen-stack-master"]

@@ -1,12 +1,10 @@
-#include "canopen-stack.h"
-#include <vector>
-#include <string>
+// #include "canopen-stack.h"
+#include <co_master.hpp>
 
-int main() {
-    canopen_stack();
-
-    std::vector<std::string> vec;
-    vec.push_back("test_package");
-
-    canopen_stack_print_vector(vec);
+int
+main()
+{
+  std::vector<CO_OBJ_T> od = create_default_od();
+  CO_NODE master_node;
+  Master_node master = Master_node(master_node);
 }

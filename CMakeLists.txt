@@ -23,6 +23,9 @@ enable_testing()
 
 # --- project wide setup
 #
+option(BUILD_TESTING "Build testing" ON)
+option(BUILD_EXAMPLES "Build examples" ON)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -35,8 +38,13 @@ add_subdirectory(src)
 # --- typically needed only if we are the top level project
 #
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    add_subdirectory(examples)
-    add_subdirectory(tests)
+    if (BUILD_EXAMPLES)
+        add_subdirectory(examples)
+    endif ()
+    if (NOT BUILD_TESTING STREQUAL OFF)
+        enable_testing()
+        add_subdirectory(tests)
+    endif ()
 
     # Setup target which creates a source package for efficient usage with Cmake
     # CPM/FetchContent

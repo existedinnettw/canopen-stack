@@ -1,0 +1,8 @@
+src/config/*
+src/core/*
+src/driver/*
+src/hal/*
+src/object/*
+src/service/*
+tests/*
+examples/*

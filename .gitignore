@@ -3,6 +3,7 @@ build/*
 out/*
 Testing/*
 .vscode/*
+*Presets.json
 
 #allow
 !.vscode/settings.json

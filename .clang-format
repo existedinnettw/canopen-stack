@@ -1,15 +1,15 @@
 ---
 Language: Cpp
-BasedOnStyle:  Mozilla
+BasedOnStyle: Mozilla
 AlignAfterOpenBracket: Align
 AllowShortFunctionsOnASingleLine: None
 #AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-ArrayInitializerAlignmentStyle: Left
+AlignArrayOfStructures: Left
 ColumnLimit: 120
-IndentWidth:     2
+IndentWidth: 2
 # TabWidth:        4
-UseTab:          Never
+UseTab: Never
 # IndentCaseLabels: false
 MaxEmptyLinesToKeep: 2
 BreakBeforeBraces: Mozilla
@@ -21,4 +21,4 @@ BreakBeforeBraces: Mozilla
 # SpaceAfterAssignmentOperators: true
 # SpaceBeforeCpp11BracedList: false
 # ContinuationIndentWidth: 4
-UseCRLF:         false
+UseCRLF: false

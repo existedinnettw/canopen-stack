@@ -36,9 +36,9 @@ static uint8_t NvmMemory[NVM_SIM_SIZE];
 * PRIVATE FUNCTIONS
 ******************************************************************************/
 
-static void     DrvNvmInit  (void);
-static uint32_t DrvNvmRead  (uint32_t start, uint8_t *buffer, uint32_t size);
-static uint32_t DrvNvmWrite (uint32_t start, uint8_t *buffer, uint32_t size);
+static void     DrvNvmInit  (const CO_IF_NVM_DRV *);
+static uint32_t DrvNvmRead  (const CO_IF_NVM_DRV *, uint32_t start, uint8_t *buffer, uint32_t size);
+static uint32_t DrvNvmWrite (const CO_IF_NVM_DRV *, uint32_t start, uint8_t *buffer, uint32_t size);
 
 
 /******************************************************************************
@@ -55,7 +55,7 @@ const CO_IF_NVM_DRV SimNvmDriver = {
 * PRIVATE FUNCTIONS
 ******************************************************************************/
 
-static void DrvNvmInit(void)
+static void DrvNvmInit(const CO_IF_NVM_DRV *)
 {
     uint32_t idx;
 
@@ -64,7 +64,7 @@ static void DrvNvmInit(void)
     }
 }
 
-static uint32_t DrvNvmRead(uint32_t start, uint8_t *buffer, uint32_t size)
+static uint32_t DrvNvmRead(const CO_IF_NVM_DRV *, uint32_t start, uint8_t *buffer, uint32_t size)
 {
     uint32_t idx = 0;
     uint32_t pos;
@@ -80,7 +80,7 @@ static uint32_t DrvNvmRead(uint32_t start, uint8_t *buffer, uint32_t size)
     return (idx);
 }
 
-static uint32_t DrvNvmWrite(uint32_t start, uint8_t *buffer, uint32_t size)
+static uint32_t DrvNvmWrite(const CO_IF_NVM_DRV *, uint32_t start, uint8_t *buffer, uint32_t size)
 {
     uint32_t idx = 0;
     uint32_t pos;

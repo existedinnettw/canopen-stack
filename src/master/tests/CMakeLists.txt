@@ -1,13 +1,4 @@
-cpmaddpackage(
-  NAME
-  googletest
-  GITHUB_REPOSITORY
-  google/googletest
-  GIT_TAG
-  v1.15.2
-  VERSION
-  1.15.2)
-
+find_package(GTest REQUIRED)
 include(GoogleTest)
 
 add_executable(unittests test_pdo_map.cpp)
